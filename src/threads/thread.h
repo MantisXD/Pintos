@@ -103,12 +103,19 @@ struct thread
 
     /* variable for thread sleep */
     int64_t sleep_ticks;
+
+    /* variable for priority scheduling */
+    int original_priority;          /* Save original value of priority */
+    struct lock *wait_on_lock;      /* Points priority donor thread */
+    struct list donor_list;         /* The list of current priority donors */
+
   };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+bool comparator(const struct list_elem *a, const struct list_elem *b, void *aux);
 
 void thread_init (void);
 void thread_start (void);
