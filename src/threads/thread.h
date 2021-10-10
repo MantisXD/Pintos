@@ -111,11 +111,15 @@ struct thread
 
   };
 
+
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
-bool comparator(const struct list_elem *a, const struct list_elem *b, void *aux);
+
+bool less(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool greater(const struct list_elem *a, const struct list_elem *b, void *aux);
+void preempt(void);
 
 void thread_init (void);
 void thread_start (void);
