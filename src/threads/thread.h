@@ -104,11 +104,11 @@ struct thread
     /* variable for thread sleep */
     int64_t sleep_ticks;
 
-    /* variable for priority scheduling */
+    /* variable for priority donation */
     int original_priority;          /* Save original value of priority */
     struct lock *wait_on_lock;      /* Points priority donor thread */
     struct list donor_list;         /* The list of current priority donors */
-
+    struct list_elem donor;         /* The list element object of the donor list */
   };
 
 
@@ -120,6 +120,7 @@ extern bool thread_mlfqs;
 bool less(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool greater(const struct list_elem *a, const struct list_elem *b, void *aux);
 void preempt(void);
+struct list* get_ready_list(void);
 
 void thread_init (void);
 void thread_start (void);

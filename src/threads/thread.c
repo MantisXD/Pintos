@@ -87,7 +87,12 @@ greater(const struct list_elem *a, const struct list_elem *b, void *aux)
 {
   return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
 }
-
+/* Get access to ready list. */
+struct list*
+get_ready_list()
+{
+  return &ready_list;
+}
 /* Preempts when new thread has higher prioirty. */
 void
 preempt()
@@ -367,7 +372,13 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  struct thread *cur = thread_current ();
+  cur->original_priority = new_priority;
+  /* Additionally check the multiple donation for further priority update. */
+  if (list_empty(&cur->donor_list))
+    cur->priority = cur->original_priority;
+  else 
+    cur->priority = list_entry (list_front (&cur->donor_list), struct thread, donor)->priority;
   /* Preempts when the changed priority updates the ready list. */
   preempt();
 }
@@ -498,7 +509,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+  /* alarm clock */
   t->sleep_ticks = 0;
+
+  /* priority donation */
+  t->original_priority = priority;
+  t->wait_on_lock = NULL;
+  list_init (&t->donor_list);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
