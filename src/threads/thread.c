@@ -99,8 +99,9 @@ preempt()
 {
   if(!list_empty(&ready_list))
   {
-    struct thread* curr_max = list_entry(list_front(&ready_list), struct thread, elem);
-    if (curr_max->priority > thread_current()->priority)
+    struct thread* cur_max = list_entry(list_front(&ready_list), struct thread, elem);
+    list_sort(&ready_list, greater, NULL);
+    if (cur_max->priority > thread_current()->priority)
       thread_yield();
   }
 }

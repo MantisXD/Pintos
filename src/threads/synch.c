@@ -68,10 +68,10 @@ sema_down (struct semaphore *sema)
 
   old_level = intr_disable ();
   while (sema->value == 0) 
-    {
-      list_insert_ordered (&sema->waiters, &thread_current ()->elem, greater, NULL);
-      thread_block ();
-    }
+  {
+    list_insert_ordered (&sema->waiters, &thread_current ()->elem, greater, NULL);  /* Update waiters list to handle nested donation. */
+    thread_block ();
+  }
   sema->value--;
   intr_set_level (old_level);
 }
@@ -114,8 +114,12 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
+  
   if (!list_empty (&sema->waiters)) 
+  {
+    list_sort(&sema->waiters, greater, NULL);
     thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
+  }
   sema->value++;
   /* Preempt when awake. */
   preempt();
@@ -198,23 +202,14 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  
-
   if (lock->holder != NULL) {
     thread_current ()->wait_on_lock = lock;
     list_insert_ordered (&lock->holder->donor_list, &thread_current ()->donor, greater_donor, NULL);
     /* Additionally check the nested donation for the priority update. */
     for(struct thread *it = thread_current(); it->wait_on_lock != NULL; it = it->wait_on_lock->holder)
-      {
-        struct semaphore *sema = &it->wait_on_lock->semaphore;
-        it->wait_on_lock->holder->priority = thread_current()->priority;
-        /* Added to synchronize priority update and waiters list update. */
-        if(!list_empty(&sema->waiters))
-          list_sort(&sema->waiters, greater, NULL);
-      }
+      it->wait_on_lock->holder->priority = thread_current()->priority;
   }
-  sema_down (&lock->semaphore);
-  thread_current()->wait_on_lock = NULL;
+  sema_down (&lock->semaphore); 
   lock->holder = thread_current ();
 }
 
@@ -262,9 +257,7 @@ lock_release (struct lock *lock)
     cur->priority = cur->original_priority;   /* If there are no more donors, thread can restore its original priority. */
   else 
     cur->priority = list_entry (list_front (&cur->donor_list), struct thread, donor)->priority;    /* If the thread still has one or more donors, update its priority to the highest among them. */
-  /* Added to synchronize priority update and waiters list update. */
-  if(!list_empty(&sema->waiters))
-    list_sort(&sema->waiters, greater, NULL);
+    
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
