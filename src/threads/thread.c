@@ -403,12 +403,19 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice)
 {
+  enum intr_level old_level = intr_disable ();
+
   ASSERT (nice >= NICE_MIN && nice <= NICE_MAX);
 
   thread_current ()->nice = nice;
   update_thread_priority (thread_current ());
   update_thread_recent_cpu (thread_current ());
+  if (!list_empty (&ready_list)) {
+    list_sort (&ready_list, greater, NULL);
+  }
   preempt();
+  intr_set_level(old_level);
+
 }
 
 /* Returns the current thread's nice value. */
@@ -653,19 +660,17 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 void
 thread_sleep (int64_t sleep_ticks)
 {
-  struct thread *cur = running_thread ();
-  enum intr_level old_level;
+  struct thread *cur;
+  enum intr_level old_level = intr_disable ();;
+  cur = thread_current();
 
   ASSERT (cur != idle_thread);
-
-  old_level = intr_disable ();
 
   cur->sleep_ticks = sleep_ticks;
   list_insert_ordered (&sleep_thread_list, &cur->elem, &list_less_sleep_thread, NULL);
   thread_block ();
 
   intr_set_level (old_level);
-
 }
 void
 thread_awake (int64_t ticks)
@@ -699,7 +704,15 @@ update_thread_priority (struct thread *t)
 {
   if (t == idle_thread)
     return;
-  t->priority = REAL_TO_INT(ADD_REAL_INT(DIV_REAL_INT(t->recent_cpu, -4), PRI_MAX - (2 * t->nice)));
+
+  int nPriority = REAL_TO_INT(ADD_REAL_INT(DIV_REAL_INT(t->recent_cpu, -4), PRI_MAX - (2 * t->nice)));
+  if (nPriority > PRI_MAX) {
+    nPriority = PRI_MAX;
+  }
+  if (nPriority < PRI_MIN) {
+    nPriority = PRI_MIN;
+  }
+  t->priority = nPriority;
 }
 
 void
@@ -714,7 +727,9 @@ update_priority ()
     e = list_next (e);
   }
 
-  preempt();
+  if (!list_empty (&ready_list)) {
+    list_sort (&ready_list, greater, NULL);
+  }
 }
 
 void
@@ -738,7 +753,6 @@ void
 update_recent_cpu ()
 {
   struct list_elem *e = list_begin (&all_list);
-  int i=0;
   while (e != list_end (&all_list))
   {
     struct thread *t = list_entry (e, struct thread, elem);
@@ -759,6 +773,5 @@ update_load_avg ()
 
   load_avg = ADD_REAL(MUL_REAL(DIV_REAL_INT(INT_TO_REAL(59), 60), load_avg),
                       MUL_REAL_INT(DIV_REAL_INT(INT_TO_REAL(1), 60), ready_threads));
-//  printf ("update_load_avg %d\n", load_avg);
-//  printf ("ready_threads %d\n", ready_threads);
+
 }

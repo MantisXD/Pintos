@@ -87,12 +87,12 @@ timer_elapsed (int64_t then)
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
-timer_sleep (int64_t ticks) 
+timer_sleep (int64_t sleep_tick)
 {
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  thread_sleep (start + ticks);
+  thread_sleep (start + sleep_tick);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -247,17 +247,17 @@ real_time_delay (int64_t num, int32_t denom)
 }
 
 void
-mlfqs_update (int64_t ticks)
+mlfqs_update (int64_t update_ticks)
 {
   if (thread_mlfqs)
   {
     increment_thread_recent_cpu();
-    if (ticks % TIMER_FREQ == 0)
+    if (update_ticks % TIMER_FREQ == 0)
     {
       update_load_avg();
       update_recent_cpu();
     }
-    if (ticks % 4 == 0)
+    if (update_ticks % 4 == 0)
       update_priority();
   }
 }
