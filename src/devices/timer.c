@@ -171,6 +171,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  mlfqs_update (ticks);
   thread_awake (ticks);
 }
 
@@ -243,4 +244,20 @@ real_time_delay (int64_t num, int32_t denom)
      the possibility of overflow. */
   ASSERT (denom % 1000 == 0);
   busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
+}
+
+void
+mlfqs_update (int64_t ticks)
+{
+  if (thread_mlfqs)
+  {
+    increment_thread_recent_cpu();
+    if (ticks % TIMER_FREQ == 0)
+    {
+      update_load_avg();
+      update_recent_cpu();
+    }
+    if (ticks % 4 == 0)
+      update_priority();
+  }
 }

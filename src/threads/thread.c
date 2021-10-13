@@ -63,6 +63,8 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
+real load_avg;
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -141,6 +143,9 @@ thread_init (void)
 void
 thread_start (void) 
 {
+  /* Init load avg value */
+  load_avg = LOAD_AVG_DEFAULT;
+
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
@@ -373,6 +378,9 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  if (thread_mlfqs)
+    return;
+
   struct thread *cur = thread_current ();
   cur->original_priority = new_priority;
   /* Additionally check the multiple donation for further priority update. */
@@ -393,33 +401,35 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int nice)
 {
-  /* Not yet implemented. */
+  ASSERT (nice >= NICE_MIN && nice <= NICE_MAX);
+
+  thread_current ()->nice = nice;
+  update_thread_priority (thread_current ());
+  update_thread_recent_cpu (thread_current ());
+  preempt();
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current ()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return REAL_TO_INT_ROUND(MUL_REAL_INT(load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return REAL_TO_INT_ROUND(MUL_REAL_INT(thread_current ()->recent_cpu, 100));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -517,6 +527,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->original_priority = priority;
   t->wait_on_lock = NULL;
   list_init (&t->donor_list);
+
+  t->nice = NICE_DEFAULT;
+  t->recent_cpu = RECENT_CPU_DEFAULT;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -637,7 +650,8 @@ allocate_tid (void)
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
-void thread_sleep (int64_t sleep_ticks)
+void
+thread_sleep (int64_t sleep_ticks)
 {
   struct thread *cur = running_thread ();
   enum intr_level old_level;
@@ -653,7 +667,8 @@ void thread_sleep (int64_t sleep_ticks)
   intr_set_level (old_level);
 
 }
-void thread_awake (int64_t ticks)
+void
+thread_awake (int64_t ticks)
 {
   struct list_elem *e;
   e = list_begin (&sleep_thread_list);
@@ -669,11 +684,81 @@ void thread_awake (int64_t ticks)
   }
 
 }
-bool list_less_sleep_thread (const struct list_elem *a,
+bool
+list_less_sleep_thread (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux UNUSED)
 {
   const int64_t a_sleep_tick = (list_entry(a, struct thread, elem))-> sleep_ticks;
   const int64_t b_sleep_tick = (list_entry(b, struct thread, elem))-> sleep_ticks;
   return a_sleep_tick < b_sleep_tick;
+}
+
+void
+update_thread_priority (struct thread *t)
+{
+  if (t == idle_thread)
+    return;
+  t->priority = REAL_TO_INT(ADD_REAL_INT(DIV_REAL_INT(t->recent_cpu, -4), PRI_MAX - (2 * t->nice)));
+}
+
+void
+update_priority ()
+{
+  struct list_elem *e;
+  e = list_begin (&all_list);
+  while (e != list_end (&all_list))
+  {
+    struct thread *t = list_entry (e, struct thread, elem);
+    update_thread_priority(t);
+    e = list_next (e);
+  }
+
+  preempt();
+}
+
+void
+increment_thread_recent_cpu ()
+{
+  struct thread *t = thread_current ();
+  if ( t!= idle_thread )
+    t->recent_cpu = ADD_REAL_INT(t->recent_cpu, 1);
+}
+
+void
+update_thread_recent_cpu (struct thread *t)
+{
+  if (t == idle_thread)
+    return;
+  t->recent_cpu = ADD_REAL_INT( MUL_REAL( DIV_REAL(MUL_REAL_INT(load_avg, 2), ADD_REAL_INT(MUL_REAL_INT(load_avg, 2), 1)), t->recent_cpu), t->nice);
+
+}
+
+void
+update_recent_cpu ()
+{
+  struct list_elem *e = list_begin (&all_list);
+  int i=0;
+  while (e != list_end (&all_list))
+  {
+    struct thread *t = list_entry (e, struct thread, elem);
+    update_thread_recent_cpu(t);
+    e = list_next (e);
+  }
+}
+
+void
+update_load_avg ()
+{
+  int ready_threads;
+
+  if( thread_current () == idle_thread)
+    ready_threads = list_size (&ready_list);
+  else
+    ready_threads = list_size (&ready_list) + 1;
+
+  load_avg = ADD_REAL(MUL_REAL(DIV_REAL_INT(INT_TO_REAL(59), 60), load_avg),
+                      MUL_REAL_INT(DIV_REAL_INT(INT_TO_REAL(1), 60), ready_threads));
+//  printf ("update_load_avg %d\n", load_avg);
+//  printf ("ready_threads %d\n", ready_threads);
 }
