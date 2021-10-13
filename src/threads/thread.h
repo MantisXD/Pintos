@@ -166,7 +166,7 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void thread_sleep (int64_t sleep_ticks);
-void thread_awake (int64_t ticks);
+void thread_awake (int64_t awake_ticks);
 bool list_less_sleep_thread (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux UNUSED);
