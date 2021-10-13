@@ -251,7 +251,8 @@ lock_release (struct lock *lock)
   if (!thread_mlfqs)
   {
     /* Remove the lock. */
-    for (struct list_elem *it = list_begin(&cur->donor_list); it != list_end(&cur->donor_list); it = list_next(it)){
+    struct list_elem *it;
+    for ( it = list_begin(&cur->donor_list); it != list_end(&cur->donor_list); it = list_next(it)){
       if (list_entry (it, struct thread, donor)->wait_on_lock == lock)
       list_remove(&list_entry (it, struct thread, donor)->donor);
     }
