@@ -171,10 +171,10 @@ bool list_less_sleep_thread (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux UNUSED);
 
-void update_thread_priority (struct thread *t);
+void update_thread_priority (struct thread *t, void *aux);
 void update_priority (void);
 void increment_thread_recent_cpu (void);
-void update_thread_recent_cpu (struct thread *t);
+void update_thread_recent_cpu (struct thread *t, void *aux);
 void update_recent_cpu (void);
 void update_load_avg (void);
 void mlfqs_update (int64_t ticks);

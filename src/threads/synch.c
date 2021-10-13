@@ -245,7 +245,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   struct thread *cur = thread_current ();
-  struct semaphore *sema = &lock->semaphore;
+//  struct semaphore *sema = &lock->semaphore;
 
   if (!thread_mlfqs)
   {
@@ -285,13 +285,13 @@ struct semaphore_elem
 
 /* Comparator for semaphore list. */
 bool
-greater_sema(const struct list_elem *a, const struct list_elem *b, void *aux)
+greater_sema(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   return list_entry(a, struct semaphore_elem, elem)->semaphore.t->priority > list_entry(b, struct semaphore_elem, elem)->semaphore.t->priority;
 }
 /* Comparator for donor list. */
 bool
-greater_donor(const struct list_elem *a, const struct list_elem *b, void *aux)
+greater_donor(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   return list_entry(a, struct thread, donor)->priority < list_entry(b, struct thread, donor)->priority;
 }

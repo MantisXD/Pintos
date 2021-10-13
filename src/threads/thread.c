@@ -79,13 +79,13 @@ static tid_t allocate_tid (void);
 
 /* Comparator for thread list. */
 bool
-less(const struct list_elem *a, const struct list_elem *b, void *aux)
+less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   return list_entry(a, struct thread, elem)->priority < list_entry(b, struct thread, elem)->priority;
 }
 /* Comparator for thread list. */
 bool
-greater(const struct list_elem *a, const struct list_elem *b, void *aux)
+greater(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
 }
@@ -407,7 +407,7 @@ thread_set_nice (int nice)
   ASSERT (nice >= NICE_MIN && nice <= NICE_MAX);
 
   thread_current ()->nice = nice;
-  update_thread_priority (thread_current ());
+  update_thread_priority (thread_current (), NULL);
   if (!list_empty (&ready_list)) {
     list_sort (&ready_list, greater, NULL);
   }
@@ -691,13 +691,11 @@ list_less_sleep_thread (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux UNUSED)
 {
-  const int64_t a_sleep_tick = (list_entry(a, struct thread, elem))-> sleep_ticks;
-  const int64_t b_sleep_tick = (list_entry(b, struct thread, elem))-> sleep_ticks;
-  return a_sleep_tick < b_sleep_tick;
+  return (list_entry(a, struct thread, elem))-> sleep_ticks < (list_entry(b, struct thread, elem))-> sleep_ticks;
 }
 
 void
-update_thread_priority (struct thread *t)
+update_thread_priority (struct thread *t, void *aux UNUSED)
 {
   if (t == idle_thread)
     return;
@@ -715,14 +713,15 @@ update_thread_priority (struct thread *t)
 void
 update_priority ()
 {
-  struct list_elem *e;
-  e = list_begin (&all_list);
-  while (e != list_end (&all_list))
-  {
-    struct thread *t = list_entry (e, struct thread, allelem);
-    update_thread_priority(t);
-    e = list_next (e);
-  }
+  thread_foreach (update_thread_priority, NULL);
+//  struct list_elem *e;
+//  e = list_begin (&all_list);
+//  while (e != list_end (&all_list))
+//  {
+//    struct thread *t = list_entry (e, struct thread, allelem);
+//    update_thread_priority(t);
+//    e = list_next (e);
+//  }
 
   if (!list_empty (&ready_list)) {
     list_sort (&ready_list, greater, NULL);
@@ -738,7 +737,7 @@ increment_thread_recent_cpu ()
 }
 
 void
-update_thread_recent_cpu (struct thread *t)
+update_thread_recent_cpu (struct thread *t, void *aux UNUSED)
 {
   if (t == idle_thread)
     return;
@@ -748,13 +747,14 @@ update_thread_recent_cpu (struct thread *t)
 void
 update_recent_cpu ()
 {
-  struct list_elem *e = list_begin (&all_list);
-  while (e != list_end (&all_list))
-  {
-    struct thread *t = list_entry (e, struct thread, allelem);
-    update_thread_recent_cpu(t);
-    e = list_next (e);
-  }
+  thread_foreach (update_thread_recent_cpu, NULL);
+//  struct list_elem *e = list_begin (&all_list);
+//  while (e != list_end (&all_list))
+//  {
+//    struct thread *t = list_entry (e, struct thread, allelem);
+//    update_thread_recent_cpu(t);
+//    e = list_next (e);
+//  }
 }
 
 void
