@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "fixed-point.h"
+#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -121,6 +122,14 @@ struct thread
     /* variable for advanced scheduler */
     int nice;
     real recent_cpu;
+
+    /* variable for system calls */
+    int exit_status;
+    struct list child_list;
+    bool is_waiting;
+    struct list fd_list;
+    struct lock *sysexit_lock;
+    struct lock *syswait_lock;
   };
 
 

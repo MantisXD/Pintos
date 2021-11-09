@@ -143,8 +143,34 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
+  struct thread *t = thread_current ();
+  struct list *child_list = &(t->child_list);
+
+  struct list_elem *it = NULL;
+  if (!list_empty(child_list)) {
+    for (it = list_front(child_list); it != list_end(child_list); it = list_next(it)) {
+      struct thread* cur = list_entry(it, struct thread, elem);
+      if(cur->tid == child_tid) 
+      { 
+        if(cur->is_waiting == true)
+          return -1;
+        else
+        {
+          cur->is_waiting = true;
+          struct lock* syswait_lock = cur->syswait_lock;
+          struct lock* sysexit_lock = cur->sysexit_lock;
+          sema_down(&syswait_lock->semaphore);  // Wait until child process exit
+          list_remove(it);
+          sema_up(&sysexit_lock->semaphore);    // Now allow the parent process to exit.
+          cur->is_waiting = false;
+          return cur->exit_status;
+        }
+
+      }
+    }
+  }
   return -1;
 }
 
@@ -172,6 +198,10 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+    struct lock* syswait_lock = cur->syswait_lock;
+    struct lock* sysexit_lock = cur->sysexit_lock;
+    sema_up(&syswait_lock->semaphore);   // Now allow parent process to continue execute.
+    sema_down(&sysexit_lock->semaphore); // Prevent parent process from exiting while waiting child process.
 }
 
 /* Sets up the CPU for running user code in the current
