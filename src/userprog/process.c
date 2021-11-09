@@ -65,7 +65,7 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
-  printf ("===============start_process :\n");
+  printf ("==start_process \n");
 
   char *file_name = file_name_;
   struct intr_frame if_;
@@ -81,18 +81,19 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+
+  argv = (const char **) palloc_get_page (0);
+  for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
+       token = strtok_r (NULL, " ", &save_ptr)) {
+    argv[argc++] = token;
+    printf ("=======start_process argv gen token: %s\n", token);
+  }
+
+  success = load (argv[0], &if_.eip, &if_.esp);
   printf ("====start_process success: %d\n", success);
 
   if (success) {
     esp = &if_.esp;
-    argv = (const char **) palloc_get_page (0);
-    for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
-         token = strtok_r (NULL, " ", &save_ptr)) {
-      argc++;
-      argv[argc] = token;
-      printf ("=======start_process token: %s\n", token);
-    }
     arg_addr = *esp;
     arg_data_size = 0;
     for (i = 0; i < argc; i++) {
@@ -100,24 +101,29 @@ start_process (void *file_name_)
       arg_data_size += strlen (argv[argc - 1 - i]) + 1;
       memcpy (*esp, argv[argc - 1 - i], strlen (argv[argc - 1 - i]) + 1); // argv contents
     }
-    palloc_free_page (argv);
-    *esp -= 4 + arg_data_size % 4;
-    *(unsigned *) *esp = (unsigned *) NULL;
+
+    *esp -= arg_data_size % 4 + 4;
+    *(int *) *esp = (int *) NULL;
 
     for (i = 0; i < argc; i++) {
       *esp -= 4;
-      *(unsigned *) *esp = (unsigned *) arg_addr;
       arg_addr -= strlen (argv[argc - 1 - i]) + 1; // argv addr
+      *(int *) *esp = (int *) arg_addr;
     }
 
     *esp -= 4;
-    *(unsigned *) *esp = (unsigned *) *esp + 4; // argv[0] addr
+    *(int *) *esp = (int *) (*esp + 4); // argv[0] addr
     *esp -= 4;
-    *(unsigned *) *esp = (unsigned *) argc;     // argc
+    *(int *) *esp = (int *) argc;     // argc
     *esp -= 4;
-    *(unsigned *) *esp = (unsigned *) 0;        // ret
-  }
+    *(int *) *esp = (int *) 0;        // ret
 
+    uintptr_t ofs = (uintptr_t) * esp;
+    size_t byte_size = 0xc0000000 - ofs;
+    hex_dump (ofs, *esp, byte_size, true);
+  }
+  palloc_free_page (argv);
+  
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
