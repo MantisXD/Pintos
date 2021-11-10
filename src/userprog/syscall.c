@@ -249,15 +249,34 @@ tell (int fd)
   return ret;
 }
 
-void 
-close (int fd)
+void
+close (int _fd)
 {
   lock_acquire (&file_lock);
-  struct file *fp = get_file(fd);
-  if (fp == NULL)
-    return;
-  else
-    file_close(fp);
+  struct thread* cur = thread_current();
+  struct list *fd_list = &(cur->fd_list);
+  struct list_elem *it;
+  struct file *fp;
+
+  if (!list_empty(fd_list))
+  {
+    for(it=list_begin(fd_list); it != list_end(fd_list); it = list_next(it))
+    {
+      struct fd *fd = list_entry(it, struct fd, elem);
+      if (fd->fd == _fd){
+        fp = fd->file;
+        if (fp == NULL)
+          exit (-1);
+        else{
+          file_close(fp);
+          list_remove (&fd->elem);
+          palloc_free_page (fd);
+          break;
+        }
+      }
+    }
+  }
+
   lock_release (&file_lock);
 }
 
@@ -301,7 +320,7 @@ user_memory_access(void* esp, size_t size, int32_t* arg)
 
 /* Return a file pointer with a given fd id by searching from fd_list of thread_current. */
 struct file* 
-get_file(int fd)
+get_file(int _fd)
 {
   struct thread* cur = thread_current();
   struct list *fd_list = &(cur->fd_list);
@@ -312,7 +331,7 @@ get_file(int fd)
       for(it=list_begin(fd_list); it != list_end(fd_list); it = list_next(it))
     {
       struct fd *fd = list_entry(it, struct fd, elem);
-      if (fd->fd == fd)
+      if (fd->fd == _fd)
         return fd->file;
     }
   }
