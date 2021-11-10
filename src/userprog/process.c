@@ -60,7 +60,6 @@ process_execute (const char *file_name)
   }
   else{
     struct thread* ct = thread_search (tid);
-    //ct->parent =cur;
     list_push_back (&(cur->child_list), &ct->child_elem);
   }
 
@@ -163,27 +162,28 @@ process_wait (tid_t child_tid)
 {
   struct thread *t = thread_current ();
   struct list *child_list = &(t->child_list);
+  int ret = -1;
   struct list_elem *it = NULL;
+
   if (!list_empty(child_list)) 
   {
     for (it = list_front(child_list); it != list_end(child_list); it = list_next(it)) 
     {
       struct thread* cur = list_entry(it, struct thread, child_elem);
-      if(cur->tid == child_tid) 
+      if(cur->tid == child_tid && cur->is_waiting == false) 
       { 
-        if(cur->is_waiting == true)
-          return -1;
         cur->is_waiting = true;
         sema_down(&cur->syswait_sema);  // Wait until child process exit
         list_remove(it);
         cur->is_waiting = false;
         sema_up (&cur->sysexit_sema);  // Now allow parent to exit.
-        return cur->exit_status;
+        ret = cur->exit_status;
+        break;
       }
     }
   }
 
-  return -1;
+  return ret;
 }
 
 /* Free the current process's resources. */
