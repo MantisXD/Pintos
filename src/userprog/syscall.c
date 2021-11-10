@@ -191,18 +191,18 @@ write (int fd, const void *buffer, unsigned size)
 
   int ret;
   lock_acquire (&file_lock);
-  struct file* fp = get_file(fd);
-  if (fp == NULL)
+
+  if (fd == 0) //STDIN
     ret = -1;
-  else
+  else if (fd == 1) // STDOUT
   {
-    if (fd == 0) //STDIN
-    ret = -1;
-    else if (fd == 1) // STDOUT
-    {
-      putbuf (buffer, size);
-      ret = (int)size;
-    }
+    putbuf (buffer, size);
+    ret = (int)size;
+  }
+  else {
+    struct file* fp = get_file(fd);
+    if (fp == NULL)
+      ret = -1;
     else
       ret = file_write(fp, buffer, size);
   }
@@ -310,97 +310,97 @@ get_file(int fd)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-  printf("System Call\n");
+//  printf("System Call\n");
 
   void* cur_esp = f->esp;
   int arg[4]; // Argument list for system calls.
-  printf ("syscall_handler cur_esp: %p\n", cur_esp);
+//  printf ("syscall_handler cur_esp: %p\n", cur_esp);
   
   user_memory_access(cur_esp, sizeof(int), &arg[0]);
-  printf("system call number: (%d)\n", arg[0]);
+//  printf("system call number: (%d)\n", arg[0]);
 
   switch ((int)arg[0])
 	{
 	  case SYS_HALT:
-      printf("handling system call (halt)\n");
+//      printf("handling system call (halt)\n");
 		  halt();
 		  break;
 	  case SYS_EXIT:
-      printf("handling system call (exit)\n");
+//      printf("handling system call (exit)\n");
       user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
-      printf("status: %d\n", arg[1]);
+//      printf("status: %d\n", arg[1]);
 		  exit((int)arg[1]);
 		  break;
     case SYS_EXEC:
-      printf("handling system call (exec)\n");
+//      printf("handling system call (exec)\n");
       user_memory_access(cur_esp + 4, sizeof(char*), &arg[1]);
-      printf("cmd_line: %s\n", arg[1]);
+//      printf("cmd_line: %s\n", arg[1]);
       f->eax = exec((char*)arg[1]);
       break;
     case SYS_WAIT:
-      printf("handling system call (wait)\n");
+//      printf("handling system call (wait)\n");
       user_memory_access(cur_esp + 4, sizeof(pid_t), &arg[1]);
-      printf("pid: %d", arg[1]);
+//      printf("pid: %d", arg[1]);
       f->eax = wait((pid_t)arg[1]);
       break;
     case SYS_CREATE:
-      printf("handling system call (create)\n");
+//      printf("handling system call (create)\n");
       user_memory_access(cur_esp + 4, sizeof(char*), &arg[1]);
       user_memory_access(cur_esp + 8, sizeof(unsigned int), &arg[2]);
-      printf("file: %s, initial_size: %d\n", arg[1], arg[2]);
+//      printf("file: %s, initial_size: %d\n", arg[1], arg[2]);
       f->eax = create((char*)arg[1], (unsigned int)arg[2]);
       break;
     case SYS_REMOVE:
-      printf("handling system call (remove)\n");
+//      printf("handling system call (remove)\n");
       user_memory_access(cur_esp + 4, sizeof(char*), &arg[1]);
-      printf("file: %s", arg[1]);
+//      printf("file: %s", arg[1]);
       f->eax = remove((char*)arg[1]);
       break;
     case SYS_OPEN:
-      printf("handling system call (open)\n");
+//      printf("handling system call (open)\n");
       user_memory_access(cur_esp + 4, sizeof(char*), &arg[1]);
-      printf("file: %s", arg[1]);
+//      printf("file: %s", arg[1]);
       f->eax = open((char*)arg[1]);
       break;
     case SYS_FILESIZE:
-      printf("handling system call (filesize)\n");
+//      printf("handling system call (filesize)\n");
       user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
-      printf("fd: %d\n", arg[1]);
+//      printf("fd: %d\n", arg[1]);
       f->eax = filesize((int)arg[1]);
       break;
     case SYS_READ:
-      printf("handling system call (read)\n");
+//      printf("handling system call (read)\n");
       user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
       user_memory_access(cur_esp + 8, sizeof(void*), &arg[2]);
       user_memory_access(cur_esp + 12, sizeof(unsigned int), &arg[3]);
-      printf("fd: %d, buffer: %d, size: %d\n", arg[1], arg[2], arg[3]);
+//      printf("fd: %d, buffer: %d, size: %d\n", arg[1], arg[2], arg[3]);
       f->eax = read((int)arg[1], (void*)arg[2], (unsigned int)arg[3]);
       break;
     case SYS_WRITE:
-      printf("handling system call (write)\n");
+//      printf("handling system call (write)\n");
       user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
       user_memory_access(cur_esp + 8, sizeof(void*), &arg[2]);
       user_memory_access(cur_esp + 12, sizeof(unsigned int), &arg[3]);
-      printf("fd: %d, buffer: %d, size: %d\n", arg[1], arg[2], arg[3]);
+//      printf("fd: %d, buffer: %s, size: %d\n", arg[1], arg[2], arg[3]);
       f->eax = write((int)arg[1], (void*)arg[2], (unsigned int)arg[3]);
       break;
     case SYS_SEEK:
-      printf("handling system call (seek)\n");
+//      printf("handling system call (seek)\n");
       user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
       user_memory_access(cur_esp + 8, sizeof(int), &arg[2]);
-      printf("fd: %d, position: %d\n", arg[1], arg[2]);
+//      printf("fd: %d, position: %d\n", arg[1], arg[2]);
       seek((int)arg[1], (unsigned int)arg[2]);
       break;
     case SYS_TELL:
-      printf("handling system call (tell)\n");\
+//      printf("handling system call (tell)\n");\
       user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
-      printf("fd: %d\n", arg[1]);
+//      printf("fd: %d\n", arg[1]);
       f->eax = tell((int)arg[1]);
       break;
     case SYS_CLOSE:
-      printf("handling system call (close)\n");
+//      printf("handling system call (close)\n");
       user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
-      printf("fd: %d\n", arg[1]);
+//      printf("fd: %d\n", arg[1]);
       close((int)arg[1]);
       break;
     default:

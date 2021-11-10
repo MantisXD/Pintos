@@ -165,6 +165,8 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 //  printf ("thread_tick t->name: %s\n", t->name);
+//  printf ("thread_tick t->sysexit_sema->value: %d\n", t->sysexit_sema.value);
+//  printf ("thread_tick t->syswait_sema->value: %d\n", t->syswait_sema.value);
 
   /* Update statistics. */
   if (t == idle_thread)

@@ -65,8 +65,8 @@ process_execute (const char *file_name)
     list_push_back (&(cur->child_list), &ct->child_elem);
   }
 
-  printf ("process_execute tid: %d\n", tid);
-  printf ("process_execute process_name: %s\n", process_name);
+//  printf ("process_execute tid: %d\n", tid);
+//  printf ("process_execute process_name: %s\n", process_name);
 
   return tid;
 }
@@ -76,7 +76,7 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
-  printf ("===============start_process :\n");
+//  printf ("===============start_process :\n");
 
   char *file_name = file_name_;
   struct intr_frame if_;
@@ -97,11 +97,11 @@ start_process (void *file_name_)
   for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
        token = strtok_r (NULL, " ", &save_ptr)) {
     argv[argc++] = token;
-    printf ("=======start_process argv gen token: %s\n", token);
+//    printf ("=======start_process argv gen token: %s\n", token);
   }
 
   success = load (argv[0], &if_.eip, &if_.esp);
-  printf ("====start_process success: %d\n", success);
+//  printf ("====start_process success: %d\n", success);
 
   if (success) {
     esp = &if_.esp;
@@ -131,7 +131,7 @@ start_process (void *file_name_)
 
     uintptr_t ofs = (uintptr_t) * esp;
     size_t byte_size = 0xc0000000 - ofs;
-    hex_dump (ofs, *esp, byte_size, true);
+//    hex_dump (ofs, *esp, byte_size, true);
   }
   palloc_free_page (argv);
   sema_up (&(thread_current ()->sysexit_sema));
@@ -195,7 +195,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-  printf ("process_exit cur->tid: %d\n", cur->tid);
+//  printf ("process_exit cur->tid: %d\n", cur->tid);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -325,7 +325,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   file = filesys_open (file_name);
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", file_name);
+//      printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
 
@@ -338,7 +338,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       || ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
       || ehdr.e_phnum > 1024) 
     {
-      printf ("load: %s: error loading executable\n", file_name);
+//      printf ("load: %s: error loading executable\n", file_name);
       goto done; 
     }
 
