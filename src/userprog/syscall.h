@@ -17,6 +17,8 @@ struct fd
 void syscall_init (void);
 
 bool is_valid_addr (void *addr);
+
+void check_mem (void *addr, size_t size);
 /* System Call Functions */
 
 /* A.	User Process Manipulation */

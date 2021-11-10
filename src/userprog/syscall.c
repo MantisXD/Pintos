@@ -48,7 +48,18 @@ is_valid_addr (void *addr){
           && pagedir_get_page(thread_current()->pagedir,addr) != NULL );
 }
 
-void 
+void
+check_mem (void *addr, size_t size ){
+  int i;
+  char *p = addr;
+  for (i = 0; i < size; i++) {
+    if (!is_valid_addr ((void *) (p + i))) {
+      exit (-1);
+    }
+  }
+}
+
+void
 halt (void)
 {
   shutdown_power_off();
@@ -112,10 +123,9 @@ remove (const char *file)
 int 
 open (const char *file)
 {
-  if (file >= PHYS_BASE) 
-  {
-    return -1;
-  }
+  check_mem (file, sizeof (file));
+
+
 
   int ret;
   lock_acquire(&file_lock);
