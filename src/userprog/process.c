@@ -60,7 +60,7 @@ process_execute (const char *file_name)
   }
   else{
     struct thread* ct = thread_search (tid);
-    sema_down (&ct->sysexit_sema);
+    //sema_down (&ct->sysexit_sema);
     //ct->parent =cur;
     list_push_back (&(cur->child_list), &ct->child_elem);
   }
@@ -134,7 +134,7 @@ start_process (void *file_name_)
 //    hex_dump (ofs, *esp, byte_size, true);
   }
   palloc_free_page (argv);
-  sema_up (&(thread_current ()->sysexit_sema));
+  //sema_up (&(thread_current ()->sysexit_sema));
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -165,26 +165,22 @@ process_wait (tid_t child_tid)
 {
   struct thread *t = thread_current ();
   struct list *child_list = &(t->child_list);
-  if(t->is_waiting == true)
-    return -1;
   struct list_elem *it = NULL;
   if (!list_empty(child_list)) 
   {
     for (it = list_front(child_list); it != list_end(child_list); it = list_next(it)) 
     {
-      struct thread* cur = list_entry(it, struct thread, elem);
+      struct thread* cur = list_entry(it, struct thread, child_elem);
       if(cur->tid == child_tid) 
       { 
         if(cur->is_waiting == true)
           return -1;
-        else
-        {
-          t->is_waiting = true;
-          sema_down(&cur->syswait_sema);  // Wait until child process exit
-          list_remove(it);
-          t->is_waiting = false;
-          return cur->exit_status;
-        }
+        cur->is_waiting = true;
+        sema_down(&cur->syswait_sema);  // Wait until child process exit
+        list_remove(it);
+        cur->is_waiting = false;
+        sema_up (&cur->sysexit_sema);
+        return cur->exit_status;
       }
     }
   }
@@ -215,8 +211,9 @@ process_exit (void)
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
-      sema_up(&cur->syswait_sema);   // Now allow parent process to continue execute.
-    }
+    } 
+    sema_up(&cur->syswait_sema);   // Now allow parent process to continue execute.
+    sema_down (&cur->sysexit_sema);
 }
 
 /* Sets up the CPU for running user code in the current

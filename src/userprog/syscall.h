@@ -11,7 +11,6 @@ struct fd
     int fd;
     struct list_elem elem;
     struct file *file;
-    struct dir *dir;
 };
 
 void syscall_init (void);

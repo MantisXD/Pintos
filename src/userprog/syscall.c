@@ -77,10 +77,7 @@ exit (int status)
 pid_t 
 exec (const char *cmd_line)
 {
-  if (cmd_line >= PHYS_BASE) 
-  {
-    return -1;
-  }
+  check_mem (cmd_line, sizeof (cmd_line));
   return (pid_t)process_execute(cmd_line);
 }
 
@@ -132,10 +129,10 @@ open (const char *file)
   {
     struct thread *cur = thread_current();
     struct fd* fd = palloc_get_page(0);
+
+    fd->file = fp;
     fd->fd = (int)list_size(&cur->fd_list) + 2;
     list_push_back(&cur->fd_list, &(fd->elem));
-    fd->file = fp;
-    fd->dir = dir_open(file_get_inode(fd->file));
     ret = fd->fd;
   }
   lock_release (&file_lock);
