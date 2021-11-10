@@ -217,7 +217,7 @@ seek (int fd, unsigned position)
   if (fp == NULL)
     return;
   else
-    fp->pos = position;
+    file_seek(fp, position);
   lock_release (&file_lock);
   return;
 }
