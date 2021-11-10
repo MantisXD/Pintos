@@ -61,7 +61,7 @@ process_execute (const char *file_name)
   else{
     struct thread* ct = thread_search (tid);
     sema_down (&ct->sysexit_sema);
-
+    //ct->parent =cur;
     list_push_back (&(cur->child_list), &ct->child_elem);
   }
 
@@ -182,7 +182,6 @@ process_wait (tid_t child_tid)
           cur->is_waiting = false;
           return cur->exit_status;
         }
-
       }
     }
   }
@@ -212,8 +211,8 @@ process_exit (void)
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
+      sema_up(&cur->syswait_sema);   // Now allow parent process to continue execute.
     }
-    sema_up(&cur->syswait_sema);   // Now allow parent process to continue execute.
 }
 
 /* Sets up the CPU for running user code in the current
@@ -328,7 +327,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 //      printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
-  file_deny_write (file);
+
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)

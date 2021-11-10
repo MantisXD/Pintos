@@ -127,7 +127,7 @@ struct thread
     int exit_status;
     struct list child_list;
     struct list_elem child_elem;
-
+    struct thread *parent;
     bool is_waiting;
     struct list fd_list;
     struct semaphore sysexit_sema;

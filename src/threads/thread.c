@@ -549,7 +549,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init (&t->child_list);
   list_init (&t->fd_list);
   t->is_waiting=false;
-  
+  t->parent = NULL;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
