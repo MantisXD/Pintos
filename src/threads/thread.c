@@ -777,3 +777,17 @@ update_load_avg ()
                       MUL_REAL_INT(DIV_REAL_INT(INT_TO_REAL(1), 60), ready_threads));
 
 }
+
+struct list_elem* 
+thread_search(tid_t tid)
+{
+  struct list_elem* it;
+  for (it = list_begin(&all_list); it != list_end(&all_list); it = list_next(it))
+  {
+    struct thread* cur = list_entry(it, struct thread, elem);
+    if (cur->tid == tid)
+    {
+      return it;
+    }
+  }
+}

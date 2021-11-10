@@ -188,4 +188,7 @@ void update_recent_cpu (void);
 void update_load_avg (void);
 void mlfqs_update (int64_t ticks);
 
+/* Function for seraching thread element by tid. */
+struct list_elem* thread_search(tid_t tid);
+
 #endif /* threads/thread.h */
