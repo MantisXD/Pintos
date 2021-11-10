@@ -333,6 +333,8 @@ syscall_handler (struct intr_frame *f)
 		  break;
     case SYS_EXEC:
       printf("handling system call (exec)\n");
+      user_memory_access(cur_esp + 4, sizeof(char*), &arg[1]);
+      printf("cmd_line: %s\n", arg[1]);
       f->eax = exec((char*)arg[1]);
       break;
     case SYS_WAIT:
@@ -343,22 +345,35 @@ syscall_handler (struct intr_frame *f)
       break;
     case SYS_CREATE:
       printf("handling system call (create)\n");
+      user_memory_access(cur_esp + 4, sizeof(char*), &arg[1]);
+      user_memory_access(cur_esp + 8, sizeof(unsigned int), &arg[2]);
+      printf("file: %s, initial_size: %d\n", arg[1], arg[2]);
       f->eax = create((char*)arg[1], (unsigned int)arg[2]);
       break;
     case SYS_REMOVE:
       printf("handling system call (remove)\n");
+      user_memory_access(cur_esp + 4, sizeof(char*), &arg[1]);
+      printf("file: %s", arg[1]);
       f->eax = remove((char*)arg[1]);
       break;
     case SYS_OPEN:
       printf("handling system call (open)\n");
+      user_memory_access(cur_esp + 4, sizeof(char*), &arg[1]);
+      printf("file: %s", arg[1]);
       f->eax = open((char*)arg[1]);
       break;
     case SYS_FILESIZE:
       printf("handling system call (filesize)\n");
+      user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
+      printf("fd: %d\n", arg[1]);
       f->eax = filesize((int)arg[1]);
       break;
     case SYS_READ:
       printf("handling system call (read)\n");
+      user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
+      user_memory_access(cur_esp + 8, sizeof(void*), &arg[2]);
+      user_memory_access(cur_esp + 12, sizeof(unsigned int), &arg[3]);
+      printf("fd: %d, buffer: %d, size: %d\n", arg[1], arg[2], arg[3]);
       f->eax = read((int)arg[1], (void*)arg[2], (unsigned int)arg[3]);
       break;
     case SYS_WRITE:
@@ -371,14 +386,21 @@ syscall_handler (struct intr_frame *f)
       break;
     case SYS_SEEK:
       printf("handling system call (seek)\n");
+      user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
+      user_memory_access(cur_esp + 8, sizeof(int), &arg[2]);
+      printf("fd: %d, position: %d\n", arg[1], arg[2]);
       seek((int)arg[1], (unsigned int)arg[2]);
       break;
     case SYS_TELL:
-      printf("handling system call (tell)\n");
+      printf("handling system call (tell)\n");\
+      user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
+      printf("fd: %d\n", arg[1]);
       f->eax = tell((int)arg[1]);
       break;
     case SYS_CLOSE:
       printf("handling system call (close)\n");
+      user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
+      printf("fd: %d\n", arg[1]);
       close((int)arg[1]);
       break;
     default:
