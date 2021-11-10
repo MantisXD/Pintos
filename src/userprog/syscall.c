@@ -392,7 +392,7 @@ syscall_handler (struct intr_frame *f)
       seek((int)arg[1], (unsigned int)arg[2]);
       break;
     case SYS_TELL:
-      printf("handling system call (tell)\n");\
+      printf("handling system call (tell)\n");
       user_memory_access(cur_esp + 4, sizeof(int), &arg[1]);
       printf("fd: %d\n", arg[1]);
       f->eax = tell((int)arg[1]);
