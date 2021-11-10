@@ -339,7 +339,8 @@ thread_exit (void)
 
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
-     when it calls thread_schedule_tail(). */
+     when it calls thread_schedule_tail(). 
+     Also flush the file descriptor table. */
   intr_disable ();
   struct thread* t = thread_current();
   list_remove (&t->allelem);
