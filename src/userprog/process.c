@@ -193,6 +193,19 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 //  printf ("process_exit cur->tid: %d\n", cur->tid);
+  struct list* elist = get_executing_file_list();
+  if (!list_empty (&elist)) {
+    struct list_elem *it;
+    for (it = list_begin (elist); it != list_end (elist); it = list_next (it)) {
+      struct exFile *exFile = list_entry (it, struct exFile, elem);
+      if (!strcmp (exFile->fileName, cur->name)) {
+        list_remove (it);
+        palloc_free_page (exFile->fileName);
+        palloc_free_page (exFile);
+        break;
+      }
+    }
+  }
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -308,6 +321,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
+  struct exFile *exFile = NULL;
   off_t file_ofs;
   bool success = false;
   int i;
@@ -325,7 +339,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
 //      printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
-  file_deny_write (file);
+  exFile = palloc_get_page (0);
+  exFile->fileName = palloc_get_page (0);
+  strlcpy (exFile->fileName, file_name, PGSIZE);
+  list_push_back (get_executing_file_list(), &exFile->elem);
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
