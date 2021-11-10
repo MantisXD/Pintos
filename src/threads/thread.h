@@ -130,8 +130,8 @@ struct thread
 
     bool is_waiting;
     struct list fd_list;
-    struct lock *sysexit_lock;
-    struct lock *syswait_lock;
+    struct semaphore sysexit_sema;
+    struct semaphore syswait_sema;
   };
 
 
@@ -191,6 +191,6 @@ void update_load_avg (void);
 void mlfqs_update (int64_t ticks);
 
 /* Function for seraching thread element by tid. */
-struct list_elem* thread_search(tid_t tid);
+struct thread* thread_search(tid_t tid);
 
 #endif /* threads/thread.h */

@@ -53,17 +53,20 @@ process_execute (const char *file_name)
 
   struct thread* cur = thread_current();
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
+
   if (tid == TID_ERROR) {
     palloc_free_page (fn_copy);
     palloc_free_page (process_name);
   }
-  else
-    list_push_back(&(cur -> child_list), thread_search(tid));
+  else{
+    struct thread* ct = thread_search (tid);
+    sema_down (&ct->sysexit_sema);
+
+    list_push_back (&(cur->child_list), &ct->child_elem);
+  }
 
   printf ("process_execute tid: %d\n", tid);
-  printf ("process_execute fn_copy: %s\n", fn_copy);
   printf ("process_execute process_name: %s\n", process_name);
-  printf ("process_execute !list_empty(&(cur->child_list)):%d \n", !list_empty (&(cur->child_list)));
 
   return tid;
 }
@@ -131,7 +134,8 @@ start_process (void *file_name_)
     hex_dump (ofs, *esp, byte_size, true);
   }
   palloc_free_page (argv);
-  
+  sema_up (&(thread_current ()->sysexit_sema));
+
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
@@ -173,11 +177,8 @@ process_wait (tid_t child_tid)
         else
         {
           cur->is_waiting = true;
-          struct lock* syswait_lock = cur->syswait_lock;
-          struct lock* sysexit_lock = cur->sysexit_lock;
-          sema_down(&syswait_lock->semaphore);  // Wait until child process exit
+          sema_down(&cur->syswait_sema);  // Wait until child process exit
           list_remove(it);
-          sema_up(&sysexit_lock->semaphore);    // Now allow the parent process to exit.
           cur->is_waiting = false;
           return cur->exit_status;
         }
@@ -212,10 +213,7 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
-    struct lock* syswait_lock = cur->syswait_lock;
-    struct lock* sysexit_lock = cur->sysexit_lock;
-    sema_up(&syswait_lock->semaphore);   // Now allow parent process to continue execute.
-    sema_down(&sysexit_lock->semaphore); // Prevent parent process from exiting while waiting child process.
+    sema_up(&cur->syswait_sema);   // Now allow parent process to continue execute.
 }
 
 /* Sets up the CPU for running user code in the current

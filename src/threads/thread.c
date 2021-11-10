@@ -164,6 +164,7 @@ void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
+//  printf ("thread_tick t->name: %s\n", t->name);
 
   /* Update statistics. */
   if (t == idle_thread)
@@ -238,6 +239,10 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
+
+  sema_init (&t->sysexit_sema, 0);
+  sema_init (&t->syswait_sema, 0);
+
 
   /* Add to run queue. 
   Preempt when a newly added thread has higher priority. */
@@ -778,7 +783,7 @@ update_load_avg ()
 
 }
 
-struct list_elem* 
+struct thread*
 thread_search(tid_t tid)
 {
   struct list_elem* it;
@@ -787,7 +792,7 @@ thread_search(tid_t tid)
     struct thread* cur = list_entry(it, struct thread, allelem);
     if (cur->tid == tid)
     {
-      return &cur->child_elem;
+      return cur;
     }
   }
   return NULL;
