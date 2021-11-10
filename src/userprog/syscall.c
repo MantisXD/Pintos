@@ -159,10 +159,7 @@ filesize (int fd)
 int 
 read (int fd, void *buffer, unsigned size)
 {
-  if ((buffer + size - 1) >= PHYS_BASE) 
-  {
-    return -1;
-  }
+  check_mem (buffer, size);
 
   int ret;
   lock_acquire(&file_lock);
@@ -196,10 +193,7 @@ read (int fd, void *buffer, unsigned size)
 int 
 write (int fd, const void *buffer, unsigned size)
 {
-  if ((buffer + size - 1) >= PHYS_BASE) 
-  {
-    return -1;
-  }
+  check_mem (buffer, size);
 
   int ret;
   lock_acquire (&file_lock);
