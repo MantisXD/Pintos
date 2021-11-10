@@ -60,7 +60,7 @@ process_execute (const char *file_name)
   }
   else{
     struct thread* ct = thread_search (tid);
-    //sema_down (&ct->sysexit_sema);
+    sema_down (&ct->sysexit_sema);
     //ct->parent =cur;
     list_push_back (&(cur->child_list), &ct->child_elem);
   }
@@ -134,7 +134,7 @@ start_process (void *file_name_)
 //    hex_dump (ofs, *esp, byte_size, true);
   }
   palloc_free_page (argv);
-  //sema_up (&(thread_current ()->sysexit_sema));
+  sema_up (&(thread_current ()->sysexit_sema));
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -179,7 +179,6 @@ process_wait (tid_t child_tid)
         sema_down(&cur->syswait_sema);  // Wait until child process exit
         list_remove(it);
         cur->is_waiting = false;
-        sema_up (&cur->sysexit_sema);
         return cur->exit_status;
       }
     }
@@ -211,9 +210,8 @@ process_exit (void)
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
-    } 
-    sema_up(&cur->syswait_sema);   // Now allow parent process to continue execute.
-    sema_down (&cur->sysexit_sema);
+      sema_up(&cur->syswait_sema);   // Now allow parent process to continue execute.
+    }
 }
 
 /* Sets up the CPU for running user code in the current
