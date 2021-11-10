@@ -784,10 +784,11 @@ thread_search(tid_t tid)
   struct list_elem* it;
   for (it = list_begin(&all_list); it != list_end(&all_list); it = list_next(it))
   {
-    struct thread* cur = list_entry(it, struct thread, elem);
+    struct thread* cur = list_entry(it, struct thread, allelem);
     if (cur->tid == tid)
     {
-      return it;
+      return &cur->child_elem;
     }
   }
+  return NULL;
 }

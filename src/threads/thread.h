@@ -126,6 +126,8 @@ struct thread
     /* variable for system calls */
     int exit_status;
     struct list child_list;
+    struct list_elem child_elem;
+
     bool is_waiting;
     struct list fd_list;
     struct lock *sysexit_lock;
