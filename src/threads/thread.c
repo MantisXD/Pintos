@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "userprog/syscall.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -340,7 +341,13 @@ thread_exit (void)
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
   intr_disable ();
-  list_remove (&thread_current()->allelem);
+  struct thread* t = thread_current();
+  list_remove (&t->allelem);
+  struct list_elem* it = NULL;
+  for (it = list_begin(&t->fd_list); it != list_end(&t->fd_list); it = list_next(it))
+  {
+    list_remove(list_entry(it, struct fd, elem));
+  }
   thread_current ()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
