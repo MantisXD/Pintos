@@ -285,13 +285,10 @@ void
 user_memory_access(void* esp, size_t size, int32_t* arg)
 {
   size_t i;
-
+  if (esp >= PHYS_BASE)
+    exit(-1);
   for(i=0; i < size; i++) 
-  {
-    if (esp >= PHYS_BASE)
-      exit(-1);
     *((char*) arg + i) = get_user(esp + i);
-  }
 }
 
 /* Return a file pointer with a given fd id by searching from fd_list of thread_current. */
