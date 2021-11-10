@@ -33,6 +33,8 @@ static struct list all_list;
  */
 static struct list sleep_thread_list;
 
+static struct list executing_file_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -131,6 +133,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&sleep_thread_list);
+  list_init (&executing_file_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -805,4 +808,10 @@ thread_search(tid_t tid)
     }
   }
   return NULL;
+}
+
+struct list*
+get_executing_file_list()
+{
+  return &executing_file_list;
 }

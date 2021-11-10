@@ -134,6 +134,17 @@ open (const char *file)
     fd->fd = (int)list_size(&cur->fd_list) + 2;
     list_push_back(&cur->fd_list, &(fd->elem));
     ret = fd->fd;
+    struct list* elist = get_executing_file_list();
+    if (!list_empty (elist)) {
+      struct list_elem *it;
+      for (it = list_begin (elist); it != list_end (elist); it = list_next (it)) {
+        struct exFile *exFile = list_entry (it, struct exFile, elem);
+        if (!strcmp (exFile->fileName, file)) {
+          file_deny_write (fp);
+          break;
+        }
+      }
+    }
   }
   lock_release (&file_lock);
   return ret;

@@ -191,5 +191,7 @@ void mlfqs_update (int64_t ticks);
 
 /* Function for seraching thread element by tid. */
 struct thread* thread_search(tid_t tid);
+struct list* get_executing_file_list();
+
 
 #endif /* threads/thread.h */
