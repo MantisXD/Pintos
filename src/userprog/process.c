@@ -165,10 +165,13 @@ process_wait (tid_t child_tid)
 {
   struct thread *t = thread_current ();
   struct list *child_list = &(t->child_list);
-
+  if(t->is_waiting == true)
+    return -1;
   struct list_elem *it = NULL;
-  if (!list_empty(child_list)) {
-    for (it = list_front(child_list); it != list_end(child_list); it = list_next(it)) {
+  if (!list_empty(child_list)) 
+  {
+    for (it = list_front(child_list); it != list_end(child_list); it = list_next(it)) 
+    {
       struct thread* cur = list_entry(it, struct thread, elem);
       if(cur->tid == child_tid) 
       { 
@@ -176,15 +179,16 @@ process_wait (tid_t child_tid)
           return -1;
         else
         {
-          cur->is_waiting = true;
+          t->is_waiting = true;
           sema_down(&cur->syswait_sema);  // Wait until child process exit
           list_remove(it);
-          cur->is_waiting = false;
+          t->is_waiting = false;
           return cur->exit_status;
         }
       }
     }
   }
+
   return -1;
 }
 
