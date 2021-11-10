@@ -543,8 +543,6 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init (&t->fd_list);
   t->is_waiting=false;
   
-  //struct file *executing_file;        /* The executable file of associated process. */
-  //uint8_t *current_esp; 
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

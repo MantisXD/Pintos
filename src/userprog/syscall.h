@@ -1,6 +1,18 @@
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
+#include "filesys/file.h"
+#include "filesys/directory.h"
+#include "lib/kernel/list.h"
+
 typedef int pid_t;
+
+struct fd
+{
+    int fd;
+    struct list_elem elem;
+    struct file *file;
+    struct dir *dir;
+};
 
 void syscall_init (void);
 

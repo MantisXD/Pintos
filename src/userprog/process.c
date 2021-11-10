@@ -42,6 +42,13 @@ process_execute (const char *file_name)
   strlcpy (process_name, file_name, PGSIZE);
   process_name = strtok_r (process_name, " ", &argv);
 
+  if (process_name == NULL)
+    return -1;
+
+  struct file* fp = filesys_open(process_name);
+  if (fp == NULL)
+    return -1;
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR) {

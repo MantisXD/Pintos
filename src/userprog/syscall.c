@@ -3,17 +3,21 @@
 #include <stdlib.h>
 #include <syscall-nr.h>
 #include "devices/shutdown.h"
+#include "devices/input.h"
 #include "threads/interrupt.h"
 #include "threads/malloc.h"
+#include "threads/palloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
 #include "userprog/exception.h"
 #include "userprog/process.h"
-#include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "filesys/directory.h"
+#include "filesys/off_t.h"
+#include "lib/kernel/list.h"
 #include "filesys/inode.h"
 
 static void syscall_handler (struct intr_frame *);
@@ -23,6 +27,10 @@ static void syscall_handler (struct intr_frame *);
 static int get_user (const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 void user_memory_access(void* esp, size_t size, int32_t* arg);
+
+/* File systems */
+
+struct file* get_file(int fd);
 
 struct lock file_lock;
 
@@ -50,7 +58,11 @@ exit (int status)
 pid_t 
 exec (const char *cmd_line)
 {
-  return 0;
+  if (cmd_line >= PHYS_BASE) 
+  {
+    return -1;
+  }
+  return (pid_t)process_execute(cmd_line);
 }
 
 int 
@@ -62,66 +74,178 @@ wait (pid_t pid)
 int 
 create (const char *file, unsigned initial_size)
 {
-  return 0;
+  if (file >= PHYS_BASE) 
+  {
+    return -1;
+  }
+
+  int ret;
+  lock_acquire(&file_lock);
+  ret =  filesys_create(file, initial_size);
+  lock_release (&file_lock);
+  return ret;
 }
 
 int 
 remove (const char *file)
 {
-  return 0;
+  if (file >= PHYS_BASE) 
+  {
+    return -1;
+  }
+
+  int ret;
+  lock_acquire(&file_lock);
+  ret = filesys_remove(file);
+  lock_release (&file_lock);
+  return ret;
 }
 
 int 
 open (const char *file)
 {
-  return 0;
+  if (file >= PHYS_BASE) 
+  {
+    return -1;
+  }
+
+  int ret;
+  lock_acquire(&file_lock);
+  struct file* fp = filesys_open(file);
+  // Fail to open the file.
+  if (fp == NULL)
+    ret = -1;
+  else
+  {
+    struct thread *cur = thread_current();
+    struct fd* fd = palloc_get_page(0);
+    fd->fd = (int)list_size(&cur->fd_list) + 2;
+    list_push_back(&cur->fd_list, &(fd->elem));
+    fd->file = fp;
+    fd->dir = dir_open(file_get_inode(fd->file));
+    ret = fd->fd;
+  }
+  lock_release (&file_lock);
+  return ret;
 }
 
 int 
 filesize (int fd)
 {
-  return 0;
+  int ret;
+  lock_acquire(&file_lock);
+  struct file *fp = get_file(fd);
+  if (fp == NULL)
+    ret = -1;
+  else
+    ret = file_length(fp);
+  lock_release (&file_lock);
+  return ret;
 }
 
 int 
 read (int fd, void *buffer, unsigned size)
 {
-  return 0;
+  if ((buffer + size - 1) >= PHYS_BASE) 
+  {
+    return -1;
+  }
+
+  int ret;
+  lock_acquire(&file_lock);
+  struct file *fp = get_file(fd);
+
+  if (fp == NULL)
+    ret = -1;
+  else
+  {
+    if (fd == 0) // STDIN
+    {
+      unsigned i;
+      for (i = 0; i < size; i++)
+      {
+        char temp = input_getc();
+        put_user(buffer+i, temp);
+        if (temp == '\0')
+          break;
+      }
+      ret = (int)i;
+    }
+    else if (fd == 1) // STDOUT
+      ret = -1;
+    else
+        ret = file_read(fp, buffer, size);
+  }
+  lock_release (&file_lock);
+  return ret;
 }
 
 int 
 write (int fd, const void *buffer, unsigned size)
 {
-  lock_acquire (&file_lock);
-  if (fd == 1)
+  if ((buffer + size - 1) >= PHYS_BASE) 
   {
-    puts(buffer);
-    lock_release (&file_lock);
-    return (int)size;
-  }
-  else
-  {
-    lock_release (&file_lock);
     return -1;
   }
+
+  int ret;
+  lock_acquire (&file_lock);
+  struct file* fp = get_file(fd);
+  if (fp == NULL)
+    ret = -1;
+  else
+  {
+    if (fd == 0) //STDIN
+    ret = -1;
+    else if (fd == 1) // STDOUT
+    {
+      puts(buffer);
+      ret = (int)size;
+    }
+    else
+      ret = file_write(fp, buffer, size);
+  }
+  lock_release (&file_lock);
+  return ret;
 }
 
 void 
 seek (int fd, unsigned position)
 {
-  return 0;
+  lock_acquire (&file_lock);
+  struct file *fp = get_file(fd);
+  if (fp == NULL)
+    return;
+  else
+    fp->pos = position;
+  lock_release (&file_lock);
+  return;
 }
 
 unsigned 
 tell (int fd)
 {
-  return 0;
+  unsigned ret;
+  lock_acquire (&file_lock);
+  struct file *fp = get_file(fd);
+  if (fp == NULL)
+    ret = -1;
+  else
+    ret = file_tell(fp);
+  lock_release (&file_lock);
+  return ret;
 }
 
 void 
 close (int fd)
 {
-  return 0;
+  lock_acquire (&file_lock);
+  struct file *fp = get_file(fd);
+  if (fp == NULL)
+    return;
+  else
+    file_close(fp);
+  lock_release (&file_lock);
 }
 
 /* Reads a byte at user virtual address UADDR.
@@ -164,6 +288,26 @@ user_memory_access(void* esp, size_t size, int32_t* arg)
   }
   *arg = atoi(temp);
   free(temp);
+}
+
+/* Return a file pointer with a given fd id by searching from fd_list of thread_current. */
+struct file* 
+get_file(int fd)
+{
+  struct thread* cur = thread_current();
+  struct list *fd_list = &(cur->fd_list);
+  struct list_elem *it;
+
+  if (!list_empty(fd_list))
+  {
+      for(it=list_begin(fd_list); it != list_end(fd_list); it = list_next(it))
+    {
+      struct fd *fd = list_entry(it, struct fd, elem);
+      if (fd->fd == fd)
+        return fd->file;
+    }
+  }
+  return NULL;
 }
 
 static void
