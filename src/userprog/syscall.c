@@ -93,10 +93,7 @@ wait (pid_t pid)
 int 
 create (const char *file, unsigned initial_size)
 {
-  if (file >= PHYS_BASE) 
-  {
-    return -1;
-  }
+  check_mem (file, sizeof (file));
 
   int ret;
   lock_acquire(&file_lock);
@@ -124,8 +121,6 @@ int
 open (const char *file)
 {
   check_mem (file, sizeof (file));
-
-
 
   int ret;
   lock_acquire(&file_lock);
