@@ -41,6 +41,13 @@ syscall_init (void)
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+bool
+is_valid_addr (void *addr){
+  return ((addr != NULL)
+          && ((unsigned) addr < (unsigned) PHYS_BASE)
+          && pagedir_get_page(thread_current()->pagedir,addr) != NULL );
+}
+
 void 
 halt (void)
 {
@@ -315,6 +322,12 @@ syscall_handler (struct intr_frame *f)
   void* cur_esp = f->esp;
   int arg[4]; // Argument list for system calls.
 //  printf ("syscall_handler cur_esp: %p\n", cur_esp);
+  if (!is_valid_addr (cur_esp)
+      || !is_valid_addr (cur_esp + 4)
+      || !is_valid_addr (cur_esp + 8)
+      || !is_valid_addr (cur_esp + 12)) {
+    exit (-1);
+  }
   
   user_memory_access(cur_esp, sizeof(int), &arg[0]);
 //  printf("system call number: (%d)\n", arg[0]);
