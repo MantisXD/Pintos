@@ -61,6 +61,7 @@ process_execute (const char *file_name)
   else{
     struct thread* ct = thread_search (tid);
     list_push_back (&(cur->child_list), &ct->child_elem);
+    sema_down (&ct->child_sema);
   }
 
 //  printf ("process_execute tid: %d\n", tid);
@@ -132,6 +133,7 @@ start_process (void *file_name_)
 //    hex_dump (ofs, *esp, byte_size, true);
   }
   palloc_free_page (argv);
+  sema_up (&thread_current ()->child_sema);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);

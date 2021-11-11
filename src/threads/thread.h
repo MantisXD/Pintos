@@ -131,6 +131,7 @@ struct thread
     struct list fd_list;
     struct semaphore sysexit_sema;
     struct semaphore syswait_sema;
+    struct semaphore child_sema;
   };
 
 
@@ -191,7 +192,7 @@ void mlfqs_update (int64_t ticks);
 
 /* Function for seraching thread element by tid. */
 struct thread* thread_search(tid_t tid);
-struct list* get_executing_file_list();
+struct list* get_executing_file_list (void);
 
 
 #endif /* threads/thread.h */

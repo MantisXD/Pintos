@@ -248,6 +248,7 @@ thread_create (const char *name, int priority,
 
   sema_init (&t->sysexit_sema, 0);
   sema_init (&t->syswait_sema, 0);
+  sema_init (&t->child_sema, 0);
 
 
   /* Add to run queue. 
