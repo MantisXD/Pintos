@@ -4,8 +4,6 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include "fixed-point.h"
-#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -25,13 +23,6 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-
-#define NICE_MIN -20
-#define NICE_DEFAULT 0
-#define NICE_MAX 20
-
-#define RECENT_CPU_DEFAULT 0
-#define LOAD_AVG_DEFAULT 0
 
 /* A kernel thread or user process.
 
@@ -105,45 +96,25 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+
+    struct list_elem p_elem;            /* List element for process child-parent relationship */
+    struct thread *parent;
+    struct list child_list;
+
+    struct list signal_list;
+    struct list fd_table;
+
+    struct file *current_file;
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-
-    /* variable for thread sleep */
-    int64_t sleep_ticks;
-
-    /* variable for priority donation */
-    int original_priority;          /* Save original value of priority */
-    struct lock *wait_on_lock;      /* Points priority donor thread */
-    struct list donor_list;         /* The list of current priority donors */
-    struct list_elem donor;         /* The list element object of the donor list */
-
-    /* variable for advanced scheduler */
-    int nice;
-    real recent_cpu;
-
-    /* variable for system calls */
-    int exit_status;
-    struct list child_list;
-    struct list_elem child_elem;
-    bool is_waiting;
-    struct list fd_list;
-    struct semaphore sysexit_sema;
-    struct semaphore syswait_sema;
-    struct semaphore child_sema;
   };
-
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
-
-bool less(const struct list_elem *a, const struct list_elem *b, void *aux);
-bool greater(const struct list_elem *a, const struct list_elem *b, void *aux);
-void preempt(void);
-struct list* get_ready_list(void);
 
 void thread_init (void);
 void thread_start (void);
@@ -176,23 +147,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-void thread_sleep (int64_t sleep_ticks);
-void thread_awake (int64_t awake_ticks);
-bool list_less_sleep_thread (const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux UNUSED);
-
-void update_thread_priority (struct thread *t, void *aux);
-void update_priority (void);
-void increment_thread_recent_cpu (void);
-void update_thread_recent_cpu (struct thread *t, void *aux);
-void update_recent_cpu (void);
-void update_load_avg (void);
-void mlfqs_update (int64_t ticks);
-
-/* Function for seraching thread element by tid. */
-struct thread* thread_search(tid_t tid);
-struct list* get_executing_file_list (void);
-
+struct thread* get_thread_from_tid(tid_t tid);
 
 #endif /* threads/thread.h */
