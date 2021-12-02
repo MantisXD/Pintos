@@ -9,7 +9,6 @@
 #include "threads/malloc.h"
 #include "threads/vaddr.h"
 
-typedef int mapid_t;
 
 static void syscall_handler (struct intr_frame *);
 
@@ -432,6 +431,7 @@ void sys_mmap (struct intr_frame * f) {
   off_t size;
   off_t mmap_size;
   struct file *file;
+  struct mapping_info mmap_info;
   mapid_t mapping;
 
   if(!validate_read(f->esp + 4, 8)) kill_process();
@@ -462,7 +462,13 @@ void sys_mmap (struct intr_frame * f) {
 
   if(!validate_write(addr, mmap_size)) kill_process();
 
+  lock_acquire(&file_lock);
   file = file_reopen(file);
+  lock_release(&file_lock);
+  if (file == NULL){
+    f->eax = -1;
+    return;
+  }
 
   /* Page mapping. */
 

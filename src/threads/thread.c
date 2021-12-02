@@ -481,6 +481,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->current_file = NULL;
 #endif
 
+#ifdef VM
+  list_init(&t->file_mapping_table);
+#endif
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);

@@ -12,10 +12,18 @@
 #include "filesys/inode.h"
 #include "filesys/off_t.h"
 
+typedef int mapid_t;
+
 struct fd_elem {
   int fd;
   struct file* file_ptr;
   struct list_elem elem;
+};
+
+struct mapping_info {
+  mapid_t mapping;
+  struct list vaddr_list;
+  struct list_elem mapping_elem;
 };
 
 void kill_process(void);

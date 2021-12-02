@@ -107,6 +107,10 @@ struct thread
     struct file *current_file;
 #endif
 
+#ifdef VM
+   struct list file_mapping_table;
+#endif
+
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
