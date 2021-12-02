@@ -438,25 +438,35 @@ void sys_mmap (struct intr_frame * f) {
   
   fd = *(int *)(f->esp + 4);
   addr = *(void **)(f->esp + 8);
+
+  if ((int*)addr % PGSIZE != 0 || addr == 0 || fd == 0 || fd == 1){
+    f->eax = -1;
+    return;
+  }
+
   file = get_file_from_fd(fd);
-
-
-  if (fd == 0 || fd == 1 || file == NULL){
+  if (file == NULL){
     f->eax = -1;
     return;
   }
 
   size = file_length(file);
+  if (size <= 0){
+    f->eax = -1;
+    return;
+  }
+
   mmap_size = size;
   if (size % PGSIZE != 0)
     mmap_size = size + (PGSIZE - size % PGSIZE);
+
   if(!validate_write(addr, mmap_size)) kill_process();
 
   file = file_reopen(file);
 
-  /* page mapping */
+  /* Page mapping. */
 
-  //////////////////
+  ///////////////////
 }
 
 //void munmap (mapid_t mapping)
@@ -466,7 +476,7 @@ void sys_munmap (struct intr_frame * f){
   
   mapping = *(mapid_t *)(f->esp + 4);
 
-  /* Find pages by mapid */
+  /* Find pages by mapid, check dirty bit. */
 
-  /////////////////////////
+  ///////////////////////////////////////////
 }
