@@ -9,6 +9,8 @@
 #include "threads/malloc.h"
 #include "threads/vaddr.h"
 
+typedef int mapid_t;
+
 static void syscall_handler (struct intr_frame *);
 
 static int get_user(const uint8_t *uaddr);
@@ -30,7 +32,9 @@ static void (*syscall_table[20])(struct intr_frame*) = {
   sys_write,
   sys_seek,
   sys_tell,
-  sys_close
+  sys_close,
+  sys_mmap,
+  sys_munmap
 }; // syscall jmp table
 
 /* Reads a byte at user virtual address UADDR.
@@ -419,4 +423,50 @@ void sys_close (struct intr_frame * f) {
       return;
     }
   }
+}
+
+//mapid_t mmap (int fd, void *addr)
+void sys_mmap (struct intr_frame * f) {
+  int fd;
+  void *addr;
+  off_t size;
+  off_t mmap_size;
+  struct file *file;
+  mapid_t mapping;
+
+  if(!validate_read(f->esp + 4, 8)) kill_process();
+  
+  fd = *(int *)(f->esp + 4);
+  addr = *(void **)(f->esp + 8);
+  file = get_file_from_fd(fd);
+
+
+  if (fd == 0 || fd == 1 || file == NULL){
+    f->eax = -1;
+    return;
+  }
+
+  size = file_length(file);
+  mmap_size = size;
+  if (size % PGSIZE != 0)
+    mmap_size = size + (PGSIZE - size % PGSIZE);
+  if(!validate_write(addr, mmap_size)) kill_process();
+
+  file = file_reopen(file);
+
+  /* page mapping */
+
+  //////////////////
+}
+
+//void munmap (mapid_t mapping)
+void sys_munmap (struct intr_frame * f){
+  mapid_t mapping;
+  if(!validate_read(f->esp + 4, 4)) kill_process();
+  
+  mapping = *(mapid_t *)(f->esp + 4);
+
+  /* Find pages by mapid */
+
+  /////////////////////////
 }
