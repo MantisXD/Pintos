@@ -3,6 +3,7 @@
 
 #include <debug.h>
 #include <list.h>
+#include <hash.h>
 #include <stdint.h>
 
 /* States in a thread's life cycle. */
@@ -105,6 +106,10 @@ struct thread
     struct list fd_table;
 
     struct file *current_file;
+#endif
+
+#ifdef VM
+    struct hash spage_table;
 #endif
 
     /* Owned by thread.c. */

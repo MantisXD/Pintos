@@ -21,6 +21,7 @@
 #include "threads/malloc.h"
 #include "userprog/syscall.h"
 #include "vm/frame.h"
+#include "vm/page.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -68,7 +69,11 @@ start_process (void *file_name_)
   bool success;
   
   void **esp = &if_.esp;
-  
+
+#ifdef VM
+  page_table_init (&thread_current()->spage_table);
+#endif
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -118,7 +123,7 @@ start_process (void *file_name_)
   *(int*)(*esp) = argc;
   *esp -= sizeof(void*);
   *(void**)(*esp) = NULL; // fake ret
-  
+
   send_signal(thread_current()->tid, SIG_EXEC);
   
   /* Start the user process by simulating a return from an
@@ -179,6 +184,8 @@ process_exit (void)
     file_close(f_e->file_ptr);
     free(f_e);
   }
+
+  page_table_destory (&cur->spage_table);
   
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -296,7 +303,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   off_t file_ofs;
   bool success = false;
   int i;
-  
+
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -471,7 +478,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
-
+  printf ("load_segment upage, read_bytes, writable: %p, %d, %d\n", upage, read_bytes, writable);
+  
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
@@ -481,6 +489,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
+#ifndef VM
       /* Get a page of memory. */
       uint8_t *kpage = frame_allocate (PAL_USER);
       if (kpage == NULL)
@@ -500,11 +509,31 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
           frame_free (kpage);
           return false; 
         }
-
+#endif
+#ifdef VM
+      struct thread *t = thread_current();
+      struct page *newPage = malloc (sizeof(struct page));
+      newPage->va = upage;
+      newPage->kva = NULL;
+      newPage->file = file;
+      newPage->read_bytes = read_bytes;
+      newPage->zero_bytes = zero_bytes;
+      newPage->writable = writable;
+//      printf ("load_segment newPage->va, writable: %p, %d\n", newPage->va, writable);
+      
+      if( !page_table_insert (&t->spage_table, newPage) )
+      {
+        free (newPage);
+        return false;
+      }
+#endif
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
       upage += PGSIZE;
+#ifdef  VM
+      ofs   += PGSIZE;
+#endif
     }
   return true;
 }
@@ -542,9 +571,21 @@ static bool
 install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();
-
+  bool success = true;
+#ifdef VM
+  struct page *newPage = malloc (sizeof(struct page));
+  newPage->va = upage;
+  newPage->kva = kpage;
+  newPage->writable = writable;
+  success = page_table_insert (&t->spage_table , newPage);
+  if (!success) {
+    free (newPage);
+  }
+#endif
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
+
   return (pagedir_get_page (t->pagedir, upage) == NULL
-          && pagedir_set_page (t->pagedir, upage, kpage, writable));
+          && pagedir_set_page (t->pagedir, upage, kpage, writable)
+          && success);
 }
