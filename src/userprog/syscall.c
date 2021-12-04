@@ -22,8 +22,8 @@ struct file* get_file_from_fd(int fd);
 bool validate_read(void *p, int size);
 bool validate_write(void *p, int size);
 
-static unsigned mmap_hash_func(const struct hash_elem *e, void *aux UNUSED);
-static bool mmap_hash_less(const struct hash_elem *A, const struct hash_elem *B, void *aux UNUSED);
+static unsigned mmap_hash_func(const struct hash_elem *e, void *aux);
+static bool mmap_hash_less(const struct hash_elem *A, const struct hash_elem *B, void *aux);
 void munmap(mapid_t mapping);
 
 static void (*syscall_table[20])(struct intr_frame*) = {
@@ -430,6 +430,18 @@ void sys_close (struct intr_frame * f) {
       return;
     }
   }
+}
+
+void
+file_mapping_table_init (struct hash *file_mapping_table)
+{
+  hash_init (file_mapping_table, mmap_hash_func, mmap_hash_less, NULL);
+}
+
+void
+file_mapping_table_destroy (struct hash *file_mapping_table)
+{
+  hash_destroy (file_mapping_table, NULL);
 }
 
 static unsigned

@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <list.h>
+#include <hash.h>
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "filesys/directory.h"
@@ -25,6 +26,7 @@ struct mmap_info {
   struct file* file_ptr;
   void *addr;
   size_t mmap_size;
+
   struct hash_elem elem;
 };
 
@@ -49,6 +51,7 @@ void sys_tell (struct intr_frame * f);
 void sys_close (struct intr_frame * f);
 
 /* Memory mapped files */
+void file_mapping_table_init (struct hash *file_mapping_table);
 void sys_mmap (struct intr_frame * f);
 void sys_munmap (struct intr_frame * f);
 

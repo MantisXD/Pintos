@@ -72,6 +72,7 @@ start_process (void *file_name_)
 
 #ifdef VM
   page_table_init (&thread_current()->spage_table);
+  file_mapping_table_init (&thread_current()->file_mapping_table);
 #endif
 
   /* Initialize interrupt frame and load executable. */
@@ -186,6 +187,7 @@ process_exit (void)
   }
 
   page_table_destory (&cur->spage_table);
+  file_mapping_table_destroy (&cur->file_mapping_table);
   
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
