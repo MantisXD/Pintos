@@ -110,7 +110,7 @@ struct thread
 
 #ifdef VM
    struct hash spage_table;
-   struct list file_mapping_table;
+   struct hash file_mapping_table;
 #endif
 
     /* Owned by thread.c. */
