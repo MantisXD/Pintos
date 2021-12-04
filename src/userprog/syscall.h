@@ -20,10 +20,12 @@ struct fd_elem {
   struct list_elem elem;
 };
 
-struct mapping_info {
+struct mmap_info {
   mapid_t mapping;
-  struct list vaddr_list;
-  struct list_elem mapping_elem;
+  struct file* file_ptr;
+  void *addr;
+  size_t mmap_size;
+  struct hash_elem elem;
 };
 
 void kill_process(void);

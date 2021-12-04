@@ -8,6 +8,10 @@
 #include "userprog/process.h"
 #include "threads/malloc.h"
 #include "threads/vaddr.h"
+#include "vm/frame.h"
+#include "vm/page.h"
+#include "vm/swap.h"
+#include "lib/kernel/hash.h"
 
 
 static void syscall_handler (struct intr_frame *);
@@ -17,6 +21,10 @@ static bool put_user(uint8_t *udst, uint8_t byte);
 struct file* get_file_from_fd(int fd);
 bool validate_read(void *p, int size);
 bool validate_write(void *p, int size);
+
+static unsigned mmap_hash_func(const struct hash_elem *e, void *aux UNUSED);
+static bool mmap_hash_less(const struct hash_elem *A, const struct hash_elem *B, void *aux UNUSED);
+void munmap(mapid_t mapping);
 
 static void (*syscall_table[20])(struct intr_frame*) = {
   sys_halt,
@@ -32,8 +40,8 @@ static void (*syscall_table[20])(struct intr_frame*) = {
   sys_seek,
   sys_tell,
   sys_close,
-  sys_mmap,
-  sys_munmap
+  //sys_mmap,
+  //sys_munmap
 }; // syscall jmp table
 
 /* Reads a byte at user virtual address UADDR.
@@ -424,6 +432,21 @@ void sys_close (struct intr_frame * f) {
   }
 }
 
+static unsigned
+mmap_hash_func(const struct hash_elem *e, void *aux UNUSED)
+{
+  struct mmap_info *mmap_info = hash_entry(e, struct mmap_info, elem);
+  return hash_int((mapid_t)mmap_info->mapping);
+}
+
+static bool
+mmap_hash_less(const struct hash_elem *A, const struct hash_elem *B, void *aux UNUSED)
+{
+  struct mmap_info *aMmap_info = hash_entry(A, struct mmap_info, elem);
+  struct mmap_info *bMmap_info = hash_entry(B, struct mmap_info, elem);
+  return aMmap_info->mapping < bMmap_info->mapping;
+}
+
 //mapid_t mmap (int fd, void *addr)
 void sys_mmap (struct intr_frame * f) {
   int fd;
@@ -431,7 +454,9 @@ void sys_mmap (struct intr_frame * f) {
   off_t size;
   off_t mmap_size;
   struct file *file;
-  struct mapping_info mmap_info;
+  struct hash* page_table;
+  struct hash* mmap_table;
+  int i;
   mapid_t mapping;
 
   if(!validate_read(f->esp + 4, 8)) kill_process();
@@ -439,7 +464,7 @@ void sys_mmap (struct intr_frame * f) {
   fd = *(int *)(f->esp + 4);
   addr = *(void **)(f->esp + 8);
 
-  if ((int*)addr % PGSIZE != 0 || addr == 0 || fd == 0 || fd == 1){
+  if ((int)addr % PGSIZE != 0 || addr == 0 || fd == 0 || fd == 1){
     f->eax = -1;
     return;
   }
@@ -462,27 +487,87 @@ void sys_mmap (struct intr_frame * f) {
 
   if(!validate_write(addr, mmap_size)) kill_process();
 
-  lock_acquire(&file_lock);
   file = file_reopen(file);
-  lock_release(&file_lock);
   if (file == NULL){
     f->eax = -1;
     return;
   }
 
-  /* Page mapping. */
+  
+  struct mmap_info* mmap_info = malloc(sizeof(mmap_info));
+  mmap_table = &thread_current()->file_mapping_table;
+  mmap_info->file_ptr = file;
+  mmap_info->addr = addr;
+  mmap_info->mmap_size = 0;
+  mapping = fd;
+  mmap_info->mapping = mapping;
+  hash_insert(mmap_table, &mmap_info->elem);
+  
 
-  ///////////////////
+  page_table = &thread_current()->spage_table;
+  for (i = 0; i < mmap_size / PGSIZE; i++) {
+    if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {
+      f->eax = -1;
+      munmap(mapping);
+      return;
+    }
+    else {
+      struct page* page = malloc(sizeof(page));
+      page->va = addr + i * PGSIZE;
+      page->file = file;
+      page->ofs = PGSIZE;
+      if (i == mmap_size / PGSIZE - 1) {
+        page->read_bytes = PGSIZE - (mmap_size - size);
+        page->zero_bytes = mmap_size - size;
+      }
+      else {
+        page->read_bytes = PGSIZE;
+        page->zero_bytes = 0;
+      }
+      page_table_insert(page_table, page);
+      mmap_info->mmap_size = (i + 1) * PGSIZE;
+    }
+  }
+
+  f->eax = mapping;
+}
+
+void munmap(mapid_t mapping) {
+  struct page* page;
+  struct hash* page_table;
+  struct mmap_info* mmap_info;
+  struct hash* mmap_table;
+  void* addr;
+  size_t mmap_size;
+  int i;
+
+  mmap_table = &thread_current()->file_mapping_table;
+  mmap_info->mapping = mapping;
+  mmap_info = hash_entry(hash_find(mmap_table, &mmap_info->elem), struct mmap_info, elem);
+  addr = mmap_info->addr;
+  mmap_size = mmap_info->mmap_size;
+  hash_delete(mmap_table, &mmap_info->elem);
+  free(mmap_info);
+
+  if (mmap_size != 0) {
+    page_table = &thread_current()->spage_table;
+    for (i = 0; i < mmap_size / PGSIZE; i++) {
+      page->va = addr + i * PGSIZE;
+      page = hash_entry(hash_find(page_table, &page->elem), struct page, elem);
+      hash_delete(page_table, &mmap_info->elem);
+      free(page);
+    }
+  }
+
 }
 
 //void munmap (mapid_t mapping)
 void sys_munmap (struct intr_frame * f){
   mapid_t mapping;
+
   if(!validate_read(f->esp + 4, 4)) kill_process();
   
   mapping = *(mapid_t *)(f->esp + 4);
 
-  /* Find pages by mapid, check dirty bit. */
-
-  ///////////////////////////////////////////
+  munmap(mapping);
 }
