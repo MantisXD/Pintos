@@ -1,10 +1,13 @@
 #include "userprog/exception.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <hash.h>
 #include "userprog/gdt.h"
 #include "userprog/signal.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
+#include "vm/page.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -152,7 +155,31 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-  
+
+#ifdef VM
+  struct thread *t = thread_current();
+  void* fault_page = (void*) pg_round_down(fault_addr);
+  if (not_present)
+  {
+    bool success = page_load_page (&t->spage_table, t->pagedir, fault_page);
+    if (success)
+      return;
+  }
+  printf ("page_fault fault_page: %p\n", fault_page);
+
+  struct hash_iterator i;
+  hash_first (&i, &t->spage_table);
+  while (hash_next (&i))
+    {
+      struct page *p = hash_entry (hash_cur (&i), struct page, elem);
+      printf ("page_fault p->va: %p\n", p->va);
+      printf ("page_fault p->writable: %d\n", p->writable);
+
+    }
+
+
+#endif
+
   if(!user) {
     f->error_code = 0;
     f->eip = (void (*)(void)) f->eax;

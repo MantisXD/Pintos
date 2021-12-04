@@ -1,6 +1,9 @@
+#include <stdio.h>
 #include "vm/frame.h"
 #include "list.h"
 #include "threads/synch.h"
+#include "threads/malloc.h"
+#include "threads/thread.h"
 
 static struct lock frame_lock;
 
