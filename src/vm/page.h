@@ -2,6 +2,7 @@
 #define VM_PAGE_H
 #include "filesys/file.h"
 #include <hash.h>
+#include "devices/block.h"
 
 struct page {
   void *va;
@@ -12,6 +13,7 @@ struct page {
   uint32_t read_bytes;
   uint32_t zero_bytes;
   bool writable;
+  block_sector_t sector;
 
   struct hash_elem elem;
 };

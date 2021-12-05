@@ -575,7 +575,7 @@ void unmap(mapid_t mapping) {
         lock_release(&file_lock);
         pagedir_set_dirty(thread_current()->pagedir, page->va, false);
       }
-      page_table_delete(page_table, &page->elem);
+      page_table_delete(page_table, page);
       free(page);
     }
   }
@@ -589,6 +589,6 @@ void sys_munmap (struct intr_frame * f){
   
   mapping = *(mapid_t *)(f->esp + 4);
   unmap(mapping);
-  
+
   return;
 }

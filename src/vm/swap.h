@@ -8,6 +8,6 @@ static struct bitmap* swap_table;
 static struct block *swap_slot;
 
 void swap_init (void);
-void swap_in (struct page *page);
+bool swap_in (struct page *page);
 bool swap_out (struct page *page);
 #endif /* vm/swap.h */

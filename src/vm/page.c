@@ -4,6 +4,8 @@
 #include "userprog/pagedir.h"
 #include "vm/page.h"
 #include "vm/frame.h"
+#include "vm/swap.h"
+#include <bitmap.h>
 
 static unsigned page_hash_func(const struct hash_elem *elem, void *aux);
 static bool page_hash_less(const struct hash_elem *A, const struct hash_elem *B, void *aux);
@@ -62,6 +64,12 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
   void *kpage = frame_allocate(PAL_USER);
   if( kpage == NULL )
     return false;
+
+  /*
+  if (bitmap_test(swap_table, tPage->sector) == true) {
+        swap_in(tPage);
+  }
+  */
 
   file_seek (tPage->file, tPage->ofs);
   if (tPage->read_bytes > 0 || tPage->zero_bytes > 0) {
