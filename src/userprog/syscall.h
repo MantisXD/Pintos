@@ -52,6 +52,7 @@ void sys_close (struct intr_frame * f);
 
 /* Memory mapped files */
 void file_mapping_table_init (struct hash *file_mapping_table);
+void file_mapping_table_destroy (struct hash *file_mapping_table);
 void sys_mmap (struct intr_frame * f);
 void sys_munmap (struct intr_frame * f);
 

@@ -6,12 +6,13 @@
 #include "devices/input.h"
 #include "userprog/signal.h"
 #include "userprog/process.h"
+#include "userprog/pagedir.h"
 #include "threads/malloc.h"
 #include "threads/vaddr.h"
 #include "vm/frame.h"
 #include "vm/page.h"
 #include "vm/swap.h"
-#include "lib/kernel/hash.h"
+#include <hash.h>
 
 
 static void syscall_handler (struct intr_frame *);
@@ -24,7 +25,7 @@ bool validate_write(void *p, int size);
 
 static unsigned mmap_hash_func(const struct hash_elem *e, void *aux);
 static bool mmap_hash_less(const struct hash_elem *A, const struct hash_elem *B, void *aux);
-void munmap(mapid_t mapping);
+void unmap(mapid_t mapping);
 
 static void (*syscall_table[20])(struct intr_frame*) = {
   sys_halt,
@@ -519,8 +520,8 @@ void sys_mmap (struct intr_frame * f) {
   page_table = &thread_current()->spage_table;
   for (i = 0; i < mmap_size / PGSIZE; i++) {
     if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {
+      unmap(mapping);      
       f->eax = -1;
-      munmap(mapping);
       return;
     }
     else {
@@ -544,11 +545,12 @@ void sys_mmap (struct intr_frame * f) {
   f->eax = mapping;
 }
 
-void munmap(mapid_t mapping) {
+void unmap(mapid_t mapping) {
   struct page* page;
   struct hash* page_table;
   struct mmap_info* mmap_info;
   struct hash* mmap_table;
+  struct file* file;
   void* addr;
   size_t mmap_size;
   int i;
@@ -556,6 +558,7 @@ void munmap(mapid_t mapping) {
   mmap_table = &thread_current()->file_mapping_table;
   mmap_info->mapping = mapping;
   mmap_info = hash_entry(hash_find(mmap_table, &mmap_info->elem), struct mmap_info, elem);
+  file = mmap_info->file_ptr;
   addr = mmap_info->addr;
   mmap_size = mmap_info->mmap_size;
   hash_delete(mmap_table, &mmap_info->elem);
@@ -566,11 +569,16 @@ void munmap(mapid_t mapping) {
     for (i = 0; i < mmap_size / PGSIZE; i++) {
       page->va = addr + i * PGSIZE;
       page = hash_entry(hash_find(page_table, &page->elem), struct page, elem);
-      hash_delete(page_table, &mmap_info->elem);
+      if (pagedir_is_dirty(thread_current()->pagedir, page->va)) {
+        lock_acquire(&file_lock);
+        file_write_at(file, page->va, mmap_size, i * PGSIZE);
+        lock_release(&file_lock);
+        pagedir_set_dirty(thread_current()->pagedir, page->va, false);
+      }
+      page_table_delete(page_table, &page->elem);
       free(page);
     }
   }
-
 }
 
 //void munmap (mapid_t mapping)
@@ -580,6 +588,7 @@ void sys_munmap (struct intr_frame * f){
   if(!validate_read(f->esp + 4, 4)) kill_process();
   
   mapping = *(mapid_t *)(f->esp + 4);
-
-  munmap(mapping);
+  unmap(mapping);
+  
+  return;
 }
