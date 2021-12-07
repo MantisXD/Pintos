@@ -108,7 +108,7 @@ bool validate_write(void *p, int size) {
 }
 
 bool validate_paging(void *p, int size) {
-  if(p >= 0x08048000 || p + size >= 0x08048000) return false;
+  if(p >= PHYS_BASE || p + size >= PHYS_BASE) return false;
   return true;
 }
 
