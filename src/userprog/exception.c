@@ -159,11 +159,35 @@ page_fault (struct intr_frame *f)
 #ifdef VM
   struct thread *t = thread_current();
   void* fault_page = (void*) pg_round_down(fault_addr);
+  void* esp = user ? f->esp : t->sp;
+  bool success = false;
+
   if (not_present)
   {
-    bool success = page_load_page (&t->spage_table, t->pagedir, fault_page);
-    if (success)
-      return;
+    struct page *tPage = page_table_lookup (&t->spage_table, fault_page);
+    if (tPage != NULL)
+    {
+      // load page
+      success = page_load_page (&t->spage_table, t->pagedir, fault_page);
+      if (success)
+        return;
+    }
+    else
+    {
+      // stack growth
+      bool is_stack_addr = (PHYS_BASE - fault_page <= MAX_STACK)
+                            && (fault_addr >= (esp - 32));
+      
+//      printf ("page_fault fault_addr, is_stack_addr: %p, %d\n", fault_addr, is_stack_addr);
+      
+      if (is_stack_addr)
+      {
+        success = grow_stack (fault_page);
+        if (success)
+          return;
+      }
+    }
+
   }
 //  printf ("page_fault fault_page: %p\n", fault_page);
 //
