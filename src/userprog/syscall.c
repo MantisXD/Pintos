@@ -41,8 +41,8 @@ static void (*syscall_table[20])(struct intr_frame*) = {
   sys_seek,
   sys_tell,
   sys_close,
-  //sys_mmap,
-  //sys_munmap
+  sys_mmap,
+  sys_munmap
 }; // syscall jmp table
 
 /* Reads a byte at user virtual address UADDR.
@@ -527,6 +527,7 @@ void sys_mmap (struct intr_frame * f) {
     else {
       struct page* page = malloc(sizeof(page));
       page->va = addr + i * PGSIZE;
+      page->kva = NULL;
       page->file = file;
       page->ofs = PGSIZE;
       if (i == mmap_size / PGSIZE - 1) {
