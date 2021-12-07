@@ -1,6 +1,7 @@
 #include <hash.h>
 #include <stdio.h>
 #include "threads/malloc.h"
+#include "threads/thread.h"
 #include "userprog/pagedir.h"
 #include "vm/page.h"
 #include "vm/frame.h"
@@ -112,5 +113,8 @@ page_hash_less(const struct hash_elem *A, const struct hash_elem *B, void *aux U
 static void
 page_hash_on_destroy (struct hash_elem *e, void *aux UNUSED)
 {
-
+  struct page *p = hash_entry (e, struct page, elem);
+  frame_free (p->kva);
+  pagedir_clear_page (thread_current ()->pagedir, p->va);
+  free (p);
 }

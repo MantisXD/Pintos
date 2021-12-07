@@ -480,7 +480,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
-  printf ("load_segment upage, read_bytes, writable: %p, %d, %d\n", upage, read_bytes, writable);
+//  printf ("load_segment upage, read_bytes, writable: %p, %d, %d\n", upage, read_bytes, writable);
   
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
@@ -515,14 +515,15 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 #ifdef VM
       struct thread *t = thread_current();
       struct page *newPage = malloc (sizeof(struct page));
-      newPage->va = upage;
-      newPage->kva = NULL;
-      newPage->file = file;
-      newPage->read_bytes = read_bytes;
-      newPage->zero_bytes = zero_bytes;
-      newPage->writable = writable;
+      newPage->va         = upage;
+      newPage->kva        = NULL;
+      newPage->file       = file;
+      newPage->read_bytes = page_read_bytes;
+      newPage->zero_bytes = page_zero_bytes;
+      newPage->ofs        = ofs;
+      newPage->writable   = writable;
 //      printf ("load_segment newPage->va, writable: %p, %d\n", newPage->va, writable);
-      
+
       if( !page_table_insert (&t->spage_table, newPage) )
       {
         free (newPage);

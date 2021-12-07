@@ -165,17 +165,17 @@ page_fault (struct intr_frame *f)
     if (success)
       return;
   }
-  printf ("page_fault fault_page: %p\n", fault_page);
-
-  struct hash_iterator i;
-  hash_first (&i, &t->spage_table);
-  while (hash_next (&i))
-    {
-      struct page *p = hash_entry (hash_cur (&i), struct page, elem);
-      printf ("page_fault p->va: %p\n", p->va);
-      printf ("page_fault p->writable: %d\n", p->writable);
-
-    }
+//  printf ("page_fault fault_page: %p\n", fault_page);
+//
+//  struct hash_iterator i;
+//  hash_first (&i, &t->spage_table);
+//  while (hash_next (&i))
+//    {
+//      struct page *p = hash_entry (hash_cur (&i), struct page, elem);
+//      printf ("page_fault p->va: %p\n", p->va);
+//      printf ("page_fault p->writable: %d\n", p->writable);
+//
+//    }
 
 
 #endif
@@ -195,7 +195,7 @@ page_fault (struct intr_frame *f)
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");
-  
+
   kill (f);
 }
 
