@@ -22,6 +22,7 @@ static bool put_user(uint8_t *udst, uint8_t byte);
 struct file* get_file_from_fd(int fd);
 bool validate_read(void *p, int size);
 bool validate_write(void *p, int size);
+bool validate_paging(void *p, int size);
 
 static unsigned mmap_hash_func(const struct hash_elem *e, void *aux);
 static bool mmap_hash_less(const struct hash_elem *A, const struct hash_elem *B, void *aux);
@@ -103,6 +104,11 @@ bool validate_write(void *p, int size) {
     if(put_user(p + i, 0) == false)
       return false;
   }
+  return true;
+}
+
+bool validate_paging(void *p, int size) {
+  if(p >= PHYS_BASE || p + size >= PHYS_BASE) return false;
   return true;
 }
 
@@ -497,7 +503,7 @@ void sys_mmap (struct intr_frame * f) {
   }
 
   size = file_length(file);
-  if (size <= 0){
+  if (size == 0){
     f->eax = -1;
     return;
   }
@@ -509,6 +515,9 @@ void sys_mmap (struct intr_frame * f) {
     mmap_size = size + (PGSIZE - size % PGSIZE);
 
 //  printf("mmap length = %d\n",mmap_size);
+
+  // Check if the address is valid.
+  if (!validate_paging(addr, mmap_size)) kill_process();
 
   /* Memory mapping. */
   /////////////////////////////////////////////////////////////////////////
@@ -526,10 +535,9 @@ void sys_mmap (struct intr_frame * f) {
   // Create vm entry and insert to spage table.
   page_table = &thread_current()->spage_table;
 
- // printf("Steps = %d\n", mmap_size / PGSIZE);
+//  printf("Steps = %d\n", mmap_size / PGSIZE);
 
   for (i = 0; i < mmap_size / PGSIZE; i++) {
-    if (!validate_write(addr + i * PGSIZE, PGSIZE)) kill_process();
     // Check whether vm space overlaps.
     if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {
       unmap(mapping);      
@@ -542,7 +550,7 @@ void sys_mmap (struct intr_frame * f) {
       page->kva = NULL;
       page->writable = true;
       page->file = file;
-      page->ofs = (i + 1) * PGSIZE;
+      page->ofs = i * PGSIZE;
       // Add zeros to align PGSIZE.
       if (i == mmap_size / PGSIZE - 1) {
         page->read_bytes = PGSIZE - (mmap_size - size);
@@ -553,7 +561,7 @@ void sys_mmap (struct intr_frame * f) {
         page->zero_bytes = 0;
       }
       page_table_insert(page_table, page);
-      printf("Mapping success, progress = %d/%d\n",mmap_info->mmap_size, mmap_size);
+//      printf("Mapping success, progress = %d/%d\n",mmap_info->mmap_size, mmap_size);
       mmap_info->mmap_size = (i + 1) * PGSIZE;
     }
   }

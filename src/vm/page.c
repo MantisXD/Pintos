@@ -67,12 +67,6 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
   if( kpage == NULL )
     return false;
 
-/*
-  if (bitmap_test(swap_table, tPage->sector) == true) {
-    swap_in(tPage);
-  }
-  */
-
   file_seek (tPage->file, tPage->ofs);
   if (tPage->read_bytes > 0 || tPage->zero_bytes > 0) {
     if (file_read (tPage->file, kpage, tPage->read_bytes) != (int) tPage->read_bytes) {
