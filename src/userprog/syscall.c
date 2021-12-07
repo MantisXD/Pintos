@@ -467,9 +467,11 @@ void sys_mmap (struct intr_frame * f) {
   off_t size;
   off_t mmap_size;
   struct file *file;
+  struct page* page;
   struct hash* page_table;
   struct hash* mmap_table;
   int i;
+
   mapid_t mapping;
 
   if(!validate_read(f->esp + 4, 8)) kill_process();
@@ -477,12 +479,18 @@ void sys_mmap (struct intr_frame * f) {
   fd = *(int *)(f->esp + 4);
   addr = *(void **)(f->esp + 8);
 
-  if ((int)addr % PGSIZE != 0 || addr == 0 || fd == 0 || fd == 1){
+  if ((int)addr % PGSIZE != 0 || addr == NULL || addr == 0 || fd == 0 || fd == 1){
     f->eax = -1;
     return;
   }
 
   file = get_file_from_fd(fd);
+  if (file == NULL){
+    f->eax = -1;
+    return;
+  }
+
+  file = file_reopen(file);
   if (file == NULL){
     f->eax = -1;
     return;
@@ -494,42 +502,48 @@ void sys_mmap (struct intr_frame * f) {
     return;
   }
 
+//  printf("file length = %d\n",size);
+
   mmap_size = size;
   if (size % PGSIZE != 0)
     mmap_size = size + (PGSIZE - size % PGSIZE);
 
-  if(!validate_write(addr, mmap_size)) kill_process();
+//  printf("mmap length = %d\n",mmap_size);
 
-  file = file_reopen(file);
-  if (file == NULL){
-    f->eax = -1;
-    return;
-  }
+  /* Memory mapping. */
+  /////////////////////////////////////////////////////////////////////////
 
-  
+  // Initialize and insert file mapping table entry.
   struct mmap_info* mmap_info = malloc(sizeof(mmap_info));
   mmap_table = &thread_current()->file_mapping_table;
   mmap_info->file_ptr = file;
   mmap_info->addr = addr;
   mmap_info->mmap_size = 0;
-  mapping = fd;
+  mapping = hash_size(mmap_table);
   mmap_info->mapping = mapping;
   hash_insert(mmap_table, &mmap_info->elem);
-  
 
+  // Create vm entry and insert to spage table.
   page_table = &thread_current()->spage_table;
+
+ // printf("Steps = %d\n", mmap_size / PGSIZE);
+
   for (i = 0; i < mmap_size / PGSIZE; i++) {
+    if (!validate_write(addr + i * PGSIZE, PGSIZE)) kill_process();
+    // Check whether vm space overlaps.
     if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {
       unmap(mapping);      
       f->eax = -1;
       return;
     }
     else {
-      struct page* page = malloc(sizeof(page));
+      page = malloc(sizeof(page));
       page->va = addr + i * PGSIZE;
       page->kva = NULL;
+      page->writable = true;
       page->file = file;
-      page->ofs = PGSIZE;
+      page->ofs = (i + 1) * PGSIZE;
+      // Add zeros to align PGSIZE.
       if (i == mmap_size / PGSIZE - 1) {
         page->read_bytes = PGSIZE - (mmap_size - size);
         page->zero_bytes = mmap_size - size;
@@ -539,9 +553,12 @@ void sys_mmap (struct intr_frame * f) {
         page->zero_bytes = 0;
       }
       page_table_insert(page_table, page);
+      printf("Mapping success, progress = %d/%d\n",mmap_info->mmap_size, mmap_size);
       mmap_info->mmap_size = (i + 1) * PGSIZE;
     }
   }
+
+  /////////////////////////////////////////////////////////////////////////
 
   f->eax = mapping;
 }
@@ -572,7 +589,7 @@ void unmap(mapid_t mapping) {
       page = hash_entry(hash_find(page_table, &page->elem), struct page, elem);
       if (pagedir_is_dirty(thread_current()->pagedir, page->va)) {
         lock_acquire(&file_lock);
-        file_write_at(file, page->va, mmap_size, i * PGSIZE);
+        file_write_at(file, page->va, PGSIZE, i * PGSIZE);
         lock_release(&file_lock);
         pagedir_set_dirty(thread_current()->pagedir, page->va, false);
       }

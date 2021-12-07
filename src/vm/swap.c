@@ -4,7 +4,7 @@
 #include "devices/block.h"
 #include "devices/partition.h"
 
-#define SECTORS_PER_PAGE (PGSIZE / BLOCK_SECTOR_SIZE);
+#define SECTORS_PER_PAGE (PGSIZE / BLOCK_SECTOR_SIZE)
 
 void swap_init () {
     swap_slot = block_get_role(BLOCK_SWAP);

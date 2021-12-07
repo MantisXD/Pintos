@@ -67,9 +67,9 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
   if( kpage == NULL )
     return false;
 
-  /*
+/*
   if (bitmap_test(swap_table, tPage->sector) == true) {
-        swap_in(tPage);
+    swap_in(tPage);
   }
   */
 
@@ -91,7 +91,8 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
   tPage->kva = kpage;
 //  printf ("page_load_page tPage->va: %p\n", tPage->va);
 //  printf ("page_load_page tPage->writable: %d\n", tPage->writable);
-  
+//  char* s = kpage;
+//  printf ("%s\n", s);
   
   return true;
 }
