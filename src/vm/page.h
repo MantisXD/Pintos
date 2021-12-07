@@ -4,6 +4,8 @@
 #include <hash.h>
 #include "devices/block.h"
 
+#define MAX_STACK (1<<23)
+
 struct page {
   void *va;
   void *kva;
@@ -25,4 +27,5 @@ bool page_table_insert(struct hash *spage_table, struct page *page);
 bool page_table_delete(struct hash *spage_table, struct page *page);
 
 bool page_load_page(struct hash *spage_table, uint32_t *pd, void *upage);
+bool grow_stack (void *vaddr);
 #endif /* vm/page.h */

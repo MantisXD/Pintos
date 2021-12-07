@@ -1,5 +1,6 @@
 #include <hash.h>
 #include <stdio.h>
+#include <string.h>
 #include "threads/malloc.h"
 #include "threads/thread.h"
 #include "userprog/pagedir.h"
@@ -92,6 +93,41 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
 //  printf ("page_load_page tPage->writable: %d\n", tPage->writable);
   
   
+  return true;
+}
+
+
+bool
+grow_stack (void *vaddr)
+{
+  struct page *newPage = malloc (sizeof(struct page));
+  struct thread *t = thread_current();
+
+  struct frame *newFrame = frame_allocate (PAL_USER);
+
+  if (newFrame == NULL) {
+    return false;
+  }
+
+  newPage->va = vaddr;
+  newPage->kva = newFrame;
+  bool success = page_table_insert(&t->spage_table, newPage);
+  if (!success)
+  {
+    free (newPage);
+    frame_free (newFrame);
+    return false;
+  }
+
+  success = (pagedir_get_page (t->pagedir, vaddr) == NULL
+             && pagedir_set_page (t->pagedir, vaddr, newFrame, true));
+
+  if (!success)
+  {
+    free (newPage);
+    frame_free (newFrame);
+    return false;
+  }
   return true;
 }
 
