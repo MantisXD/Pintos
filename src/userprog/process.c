@@ -163,7 +163,10 @@ process_exit (void)
   struct signal *sig;
   struct fd_elem *f_e;
   struct list_elem *e;
-  
+  struct hash_iterator i;
+  struct page *p;
+  struct mmap_info *m;
+
   if(cur->parent) list_remove(&cur->p_elem);
   
   for (e = list_begin (&cur->signal_list); e != list_end (&cur->signal_list); )

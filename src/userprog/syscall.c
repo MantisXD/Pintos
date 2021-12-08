@@ -539,8 +539,7 @@ void sys_mmap (struct intr_frame * f) {
 
   for (i = 0; i < mmap_size / PGSIZE; i++) {
     // Check whether vm space overlaps.
-    if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {
-      unmap(mapping);      
+    if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {  
       f->eax = -1;
       return;
     }
@@ -560,7 +559,7 @@ void sys_mmap (struct intr_frame * f) {
         page->read_bytes = PGSIZE;
         page->zero_bytes = 0;
       }
-      page_table_insert(page_table, page);
+        page_table_insert(page_table, page);
 //      printf("Mapping success, progress = %d/%d\n",mmap_info->mmap_size, mmap_size);
       mmap_info->mmap_size = (i + 1) * PGSIZE;
     }
@@ -599,8 +598,9 @@ void unmap(mapid_t mapping) {
         lock_acquire(&file_lock);
         file_write_at(file, page->va, PGSIZE, i * PGSIZE);
         lock_release(&file_lock);
-        pagedir_set_dirty(thread_current()->pagedir, page->va, false);
       }
+      frame_free (page->kva);
+      pagedir_clear_page (thread_current ()->pagedir, page->va);
       page_table_delete(page_table, page);
       free(page);
     }
