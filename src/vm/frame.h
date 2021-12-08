@@ -12,6 +12,7 @@ struct frame{
 
 void frame_init (void);
 void *frame_allocate (enum palloc_flags flags);
+bool frame_evict();
 void frame_free (void *page);
 struct frame *frame_find(void *page);
 

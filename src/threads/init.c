@@ -111,7 +111,7 @@ main (void)
 
 #ifdef VM
   frame_init ();
-  //swap_init ();
+  swap_init ();
 #endif
 
   /* Initialize interrupt handlers. */

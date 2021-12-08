@@ -3,17 +3,26 @@
 #include "vm/frame.h"
 #include "devices/block.h"
 #include "devices/partition.h"
+#include "userprog/syscall.h"
 
 #define SECTORS_PER_PAGE (PGSIZE / BLOCK_SECTOR_SIZE)
 
-static void swap_init () {
+void swap_init () {
     swap_slot = block_get_role(BLOCK_SWAP);
+    if (swap_slot == NULL) {
+        swap_table = bitmap_create (0);
+        return;
+    }
     swap_table = bitmap_create (block_size(swap_slot) / SECTORS_PER_PAGE);
 }
 
-static bool swap_in (struct page * page) {
+bool swap_in (struct page * page) {
     size_t idx = page->sector;
     int i;
+
+    if (bitmap_size(swap_table) == 0) {
+        return false;
+    }
 
     if (bitmap_test(swap_table, idx) == false) {
         return false;
@@ -27,9 +36,13 @@ static bool swap_in (struct page * page) {
     return true;
 }
 
-static bool swap_out (struct page *page) {
+bool swap_out (struct page *page) {
     size_t idx;
     int i;
+
+    if (bitmap_size(swap_table) == 0) {
+        return false;
+    }
 
     idx = bitmap_scan_and_flip (swap_table, 0, 1, false);
     if (idx == BITMAP_ERROR)

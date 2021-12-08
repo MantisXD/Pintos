@@ -4,6 +4,7 @@
 #include "threads/malloc.h"
 #include "threads/thread.h"
 #include "userprog/pagedir.h"
+#include "userprog/syscall.h"
 #include "vm/page.h"
 #include "vm/frame.h"
 #include "vm/swap.h"
@@ -39,6 +40,7 @@ struct page *page_table_lookup (struct hash *spage_table, void *vaddr)
 bool page_table_insert(struct hash *spage_table, struct page *page)
 {
   struct hash_elem *e = hash_insert (spage_table, &page->elem);
+
   if( e == NULL)
     return true;
   else
@@ -67,20 +69,25 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
   if( kpage == NULL )
     return false;
 
-  file_seek (tPage->file, tPage->ofs);
-  if (tPage->read_bytes > 0 || tPage->zero_bytes > 0) {
-    if (file_read (tPage->file, kpage, tPage->read_bytes) != (int) tPage->read_bytes) {
-      frame_free (kpage);
-      return false;
-    }
-    memset (kpage + tPage->read_bytes, 0, tPage->zero_bytes);
+  //if (bitmap_test(swap_table,tPage->sector) ==  false) {
+  //    swap_in(tPage);
+  //}
+  //else {
+    file_seek (tPage->file, tPage->ofs);
+    if (tPage->read_bytes > 0 || tPage->zero_bytes > 0) {
+      if (file_read (tPage->file, kpage, tPage->read_bytes) != (int) tPage->read_bytes) {
+        frame_free (kpage);
+        return false;
+      }
+      memset (kpage + tPage->read_bytes, 0, tPage->zero_bytes);
 
-    if( !pagedir_set_page (pd, upage, kpage, tPage->writable))
-    {
-      frame_free (kpage);
-      return false;
+      if( !pagedir_set_page (pd, upage, kpage, tPage->writable))
+      {
+        frame_free (kpage);
+        return false;
+      }
     }
-  }
+  //}
 
   tPage->kva = kpage;
 //  printf ("page_load_page tPage->va: %p\n", tPage->va);
@@ -130,7 +137,7 @@ static unsigned
 page_hash_func(const struct hash_elem *e, void *aux UNUSED)
 {
   struct page *page = hash_entry(e, struct page, elem);
-  return hash_int((int)page->va);
+  return hash_int((uintptr_t)page->va);
 }
 
 static bool
@@ -145,7 +152,9 @@ static void
 page_hash_on_destroy (struct hash_elem *e, void *aux UNUSED)
 {
   struct page *p = hash_entry (e, struct page, elem);
+  
   frame_free (p->kva);
   pagedir_clear_page (thread_current ()->pagedir, p->va);
+  hash_delete (&thread_current ()->spage_table, &p->elem);
   free (p);
 }

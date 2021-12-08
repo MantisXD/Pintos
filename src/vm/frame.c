@@ -1,14 +1,17 @@
 #include <stdio.h>
 #include "vm/frame.h"
 #include "list.h"
+#include <hash.h>
 #include "threads/synch.h"
 #include "threads/malloc.h"
 #include "threads/thread.h"
+#include "userprog/syscall.h"
+#include "vm/page.h"
+#include "vm/swap.h"
 
 static struct lock frame_lock;
-
 static struct list frame_list;
-
+struct frame* FIFO();
 
 void
 frame_init ()
@@ -19,21 +22,64 @@ frame_init ()
 
 void *frame_allocate (enum palloc_flags flags)
 {
-  void *frame_page = palloc_get_page (PAL_USER | flags);\
+  void *frame_page = palloc_get_page (PAL_USER | flags);
+  /*
   if (frame_page == NULL) {
-
+    if(frame_evict()) {
+      frame_page = palloc_get_page (PAL_USER | flags);
+    }
+    else {
+      kill_process();
+    }
   }
-  else {
-    struct frame *f = malloc(sizeof(struct frame));
-    f->kva = frame_page;
-    f->t = thread_current();
+  */
 
-    lock_acquire (&frame_lock);
-    list_push_back (&frame_list, &f->elem);
-    lock_release (&frame_lock);
-  }
+  struct frame *f = malloc(sizeof(struct frame));
+  f->kva = frame_page;
+  f->t = thread_current();
+
+  lock_acquire (&frame_lock);
+  list_push_back (&frame_list, &f->elem);
+  lock_release (&frame_lock);
 
   return frame_page;
+}
+
+struct frame* FIFO() {
+  return list_entry(list_front(&frame_list), struct frame, elem);
+}
+
+struct page* find_page(struct frame* f) {
+  struct thread* t = f->t;
+  struct page *p;
+  struct hash spt = t->spage_table;
+  struct hash_iterator i;
+
+  hash_first (&i, &spt);
+  while (hash_next (&i))
+    {
+      p = hash_entry (hash_cur (&i), struct page, elem);
+      if(p->kva == f->kva) return p;
+    }
+  return NULL;
+}
+
+bool frame_evict() {
+  bool result;;
+	struct frame* victim = FIFO();
+  struct page* p = find_page(victim);
+
+  if (p == NULL) kill_process();
+
+  result = swap_out(p);
+  if (result) {
+    frame_free (p->kva);
+    pagedir_clear_page (victim->t->pagedir, p->va);
+    hash_delete (&victim->t->spage_table, &p->elem);
+    free (p);
+  }
+
+	return result;
 }
 
 void

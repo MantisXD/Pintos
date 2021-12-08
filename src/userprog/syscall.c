@@ -455,7 +455,7 @@ static unsigned
 mmap_hash_func(const struct hash_elem *e, void *aux UNUSED)
 {
   struct mmap_info *mmap_info = hash_entry(e, struct mmap_info, elem);
-  return hash_int((mapid_t)mmap_info->mapping);
+  return hash_int((int)mmap_info->mapping);
 }
 
 static bool
@@ -473,7 +473,6 @@ void sys_mmap (struct intr_frame * f) {
   off_t size;
   off_t mmap_size;
   struct file *file;
-  struct page* page;
   struct hash* page_table;
   struct hash* mmap_table;
   int i;
@@ -540,16 +539,18 @@ void sys_mmap (struct intr_frame * f) {
   for (i = 0; i < mmap_size / PGSIZE; i++) {
     // Check whether vm space overlaps.
     if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {  
+      //printf("Overlap!");
       f->eax = -1;
       return;
     }
     else {
-      page = malloc(sizeof(page));
-      page->va = addr + i * PGSIZE;
+      struct page* page = malloc(sizeof(page));
+      page->va = (void *)(addr + i * PGSIZE);
       page->kva = NULL;
       page->writable = true;
       page->file = file;
       page->ofs = i * PGSIZE;
+      page->sector = -1;
       // Add zeros to align PGSIZE.
       if (i == mmap_size / PGSIZE - 1) {
         page->read_bytes = PGSIZE - (mmap_size - size);
@@ -559,8 +560,12 @@ void sys_mmap (struct intr_frame * f) {
         page->read_bytes = PGSIZE;
         page->zero_bytes = 0;
       }
-        page_table_insert(page_table, page);
-//      printf("Mapping success, progress = %d/%d\n",mmap_info->mmap_size, mmap_size);
+      if (!page_table_insert(page_table, page)) {
+        free(page);
+        f->eax = -1;
+        return;
+      }
+//    printf("Mapping success, progress = %d/%d\n",mmap_info->mmap_size, mmap_size);
       mmap_info->mmap_size = (i + 1) * PGSIZE;
     }
   }
