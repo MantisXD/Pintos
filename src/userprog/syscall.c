@@ -570,8 +570,6 @@ void sys_mmap (struct intr_frame * f) {
     }
   }
 
-  /////////////////////////////////////////////////////////////////////////
-
   f->eax = mapping;
 }
 
@@ -585,23 +583,43 @@ void unmap(mapid_t mapping) {
   size_t mmap_size;
   int i;
 
+  lock_acquire (&file_lock);
   mmap_table = &thread_current()->file_mapping_table;
-  mmap_info->mapping = mapping;
-  mmap_info = hash_entry(hash_find(mmap_table, &mmap_info->elem), struct mmap_info, elem);
+
+  struct mmap_info tmp_mmap_info;
+  tmp_mmap_info.mapping = mapping;
+  struct hash_elem *e = hash_find (mmap_table, &tmp_mmap_info.elem);
+
+  if( e == NULL ){
+    lock_release (&file_lock);
+    printf ("unmap : hash_elem null\n");
+    return;
+  }
+
+  mmap_info = hash_entry(e, struct mmap_info, elem);
   file = mmap_info->file_ptr;
   addr = mmap_info->addr;
   mmap_size = mmap_info->mmap_size;
   hash_delete(mmap_table, &mmap_info->elem);
-  free(mmap_info);
+  free (mmap_info);
+  lock_release (&file_lock);
 
   if (mmap_size != 0) {
+
+
     page_table = &thread_current()->spage_table;
     for (i = 0; i < mmap_size / PGSIZE; i++) {
-      page->va = addr + i * PGSIZE;
-      page = hash_entry(hash_find(page_table, &page->elem), struct page, elem);
+      page = page_table_lookup( page_table, addr + i * PGSIZE );
+
+
+      if( page == NULL){
+        printf ("unmap : page is null\n");
+        continue;
+      }
+
       if (pagedir_is_dirty(thread_current()->pagedir, page->va)) {
         lock_acquire(&file_lock);
-        file_write_at(file, page->va, PGSIZE, i * PGSIZE);
+        file_write_at(file, page->va, page->read_bytes, page->ofs);
         lock_release(&file_lock);
       }
       frame_free (page->kva);
