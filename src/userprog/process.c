@@ -525,7 +525,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       newPage->zero_bytes = page_zero_bytes;
       newPage->ofs        = ofs;
       newPage->writable   = writable;
-//      printf ("load_segment newPage->va, writable: %p, %d\n", newPage->va, writable);
 
       if( !page_table_insert (&t->spage_table, newPage) )
       {

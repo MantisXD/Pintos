@@ -507,13 +507,9 @@ void sys_mmap (struct intr_frame * f) {
     return;
   }
 
-//  printf("file length = %d\n",size);
-
   mmap_size = size;
   if (size % PGSIZE != 0)
     mmap_size = size + (PGSIZE - size % PGSIZE);
-
-//  printf("mmap length = %d\n",mmap_size);
 
   // Check if the address is valid.
   if (!validate_paging(addr, mmap_size)) kill_process();
@@ -533,13 +529,9 @@ void sys_mmap (struct intr_frame * f) {
 
   // Create vm entry and insert to spage table.
   page_table = &thread_current()->spage_table;
-
-//  printf("Steps = %d\n", mmap_size / PGSIZE);
-
   for (i = 0; i < mmap_size / PGSIZE; i++) {
     // Check whether vm space overlaps.
     if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {  
-      //printf("Overlap!");
       f->eax = -1;
       return;
     }
@@ -565,7 +557,6 @@ void sys_mmap (struct intr_frame * f) {
         f->eax = -1;
         return;
       }
-//    printf("Mapping success, progress = %d/%d\n",mmap_info->mmap_size, mmap_size);
       mmap_info->mmap_size = (i + 1) * PGSIZE;
     }
   }

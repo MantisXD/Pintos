@@ -178,8 +178,6 @@ page_fault (struct intr_frame *f)
       bool is_stack_addr = (PHYS_BASE - fault_page <= MAX_STACK)
                             && (fault_addr >= (esp - 32));
       
-//      printf ("page_fault fault_addr, is_stack_addr: %p, %d\n", fault_addr, is_stack_addr);
-      
       if (is_stack_addr)
       {
         success = grow_stack (fault_page);

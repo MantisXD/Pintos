@@ -24,7 +24,7 @@ frame_init ()
 void *frame_allocate (enum palloc_flags flags)
 {
   void *frame_page = palloc_get_page (PAL_USER | flags);
-  /*
+
   if (frame_page == NULL) {
     if(frame_evict()) {
       frame_page = palloc_get_page (PAL_USER | flags);
@@ -33,7 +33,6 @@ void *frame_allocate (enum palloc_flags flags)
       kill_process();
     }
   }
-  */
 
   struct frame *f = malloc(sizeof(struct frame));
   f->kva = frame_page;

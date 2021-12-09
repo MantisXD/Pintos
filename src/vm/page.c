@@ -69,10 +69,10 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
   if( kpage == NULL )
     return false;
 
-  //if (bitmap_test(swap_table,tPage->sector) ==  false) {
-  //    swap_in(tPage);
-  //}
-  //else {
+  if (bitmap_test(swap_table,tPage->sector) ==  false) {
+      swap_in(tPage);
+  }
+  else {
     file_seek (tPage->file, tPage->ofs);
     if (tPage->read_bytes > 0 || tPage->zero_bytes > 0) {
       if (file_read (tPage->file, kpage, tPage->read_bytes) != (int) tPage->read_bytes) {
@@ -87,14 +87,9 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
         return false;
       }
     }
-  //}
+  }
 
   tPage->kva = kpage;
-//  printf ("page_load_page tPage->va: %p\n", tPage->va);
-//  printf ("page_load_page tPage->writable: %d\n", tPage->writable);
-//  char* s = kpage;
-//  printf ("%s\n", s);
-  
   return true;
 }
 
