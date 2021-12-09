@@ -512,7 +512,10 @@ void sys_mmap (struct intr_frame * f) {
     mmap_size = size + (PGSIZE - size % PGSIZE);
 
   // Check if the address is valid.
-  if (!validate_paging(addr, mmap_size)) kill_process();
+  if (!validate_paging(addr, mmap_size)) {
+    f->eax = -1;
+    return;
+  }
 
   /* Memory mapping. */
   /////////////////////////////////////////////////////////////////////////
@@ -531,7 +534,7 @@ void sys_mmap (struct intr_frame * f) {
   page_table = &thread_current()->spage_table;
   for (i = 0; i < mmap_size / PGSIZE; i++) {
     // Check whether vm space overlaps.
-    if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {  
+    if (page_table_lookup(page_table, addr + i * PGSIZE) != NULL) {
       f->eax = -1;
       return;
     }
