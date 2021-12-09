@@ -5,7 +5,6 @@
 #include <list.h>
 #include <hash.h>
 #include <stdint.h>
-#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -107,8 +106,6 @@ struct thread
     struct list fd_table;
 
     struct file *current_file;
-
-    struct semaphore child_sema;
 #endif
 
 #ifdef VM

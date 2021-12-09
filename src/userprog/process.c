@@ -49,11 +49,6 @@ process_execute (const char *file_name)
   tid = thread_create (strtok_r(fn_copy, " ", &save_ptr), PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
-  else{
-    struct thread* ct = get_thread_from_tid (tid);
-    sema_down (&ct->child_sema);
-  }
-
   
   return tid;
 }
@@ -90,7 +85,6 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   if (!success) {
     send_signal(-1, SIG_EXEC);
-    sema_up (&thread_current ()->child_sema);
     palloc_free_page (file_name);
     thread_exit ();
   }
@@ -132,7 +126,6 @@ start_process (void *file_name_)
   *(void**)(*esp) = NULL; // fake ret
 
   send_signal(thread_current()->tid, SIG_EXEC);
-  sema_up (&thread_current ()->child_sema);
   
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
