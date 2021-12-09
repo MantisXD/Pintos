@@ -522,7 +522,7 @@ void sys_mmap (struct intr_frame * f) {
   /////////////////////////////////////////////////////////////////////////
 
   // Initialize and insert file mapping table entry.
-  struct mmap_info* mmap_info = malloc(sizeof(mmap_info));
+  struct mmap_info* mmap_info = malloc(sizeof(struct mmap_info));
   mmap_table = &thread_current()->file_mapping_table;
   mmap_info->file_ptr = file;
   mmap_info->addr = addr;
@@ -544,7 +544,7 @@ void sys_mmap (struct intr_frame * f) {
       return;
     }
     else {
-      struct page* page = malloc(sizeof(page));
+      struct page* page = malloc(sizeof(struct page));
       page->va = (void *)(addr + i * PGSIZE);
       page->kva = NULL;
       page->writable = true;

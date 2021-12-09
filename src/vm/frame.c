@@ -12,6 +12,7 @@
 static struct lock frame_lock;
 static struct list frame_list;
 struct frame* FIFO();
+struct page* find_page(struct frame* f);
 
 void
 frame_init ()
