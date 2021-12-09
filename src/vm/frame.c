@@ -91,6 +91,7 @@ frame_free (void *page)
   if (f != NULL) {
     list_remove (&f->elem);
     palloc_free_page (f->kva);
+    free (f);
   }
   lock_release (&frame_lock);
 }

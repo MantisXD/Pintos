@@ -583,7 +583,7 @@ void unmap(mapid_t mapping) {
 
   if( e == NULL ){
     lock_release (&file_lock);
-    printf ("unmap : hash_elem null\n");
+//    printf ("unmap : hash_elem null\n");
     return;
   }
 

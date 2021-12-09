@@ -68,9 +68,10 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
   void *kpage = frame_allocate(PAL_USER);
   if( kpage == NULL )
     return false;
-
-  if (bitmap_test(swap_table,tPage->sector) ==  false) {
-      swap_in(tPage);
+//  printf ("page_load_page swap_table: %p\n", &swap_table);
+  
+  if ( tPage->sector != -1 && bitmap_test (&swap_table, tPage->sector) == false) {
+    swap_in (tPage);
   }
   else {
     file_seek (tPage->file, tPage->ofs);
@@ -81,8 +82,7 @@ bool page_load_page (struct hash *spage_table, uint32_t *pd, void *upage)
       }
       memset (kpage + tPage->read_bytes, 0, tPage->zero_bytes);
 
-      if( !pagedir_set_page (pd, upage, kpage, tPage->writable))
-      {
+      if (!pagedir_set_page (pd, upage, kpage, tPage->writable)) {
         frame_free (kpage);
         return false;
       }
@@ -108,6 +108,7 @@ grow_stack (void *vaddr)
 
   newPage->va = vaddr;
   newPage->kva = newFrame;
+  newPage->sector = -1;
   bool success = page_table_insert(&t->spage_table, newPage);
   if (!success)
   {

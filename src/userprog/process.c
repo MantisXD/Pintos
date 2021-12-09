@@ -189,6 +189,12 @@ process_exit (void)
     free(f_e);
   }
 
+  while (!hash_empty(&cur->file_mapping_table)) {
+    hash_first (&i, &cur->file_mapping_table);
+    struct mmap_info *info = hash_entry (hash_cur (&i), struct mmap_info, elem);
+    unmap (info->mapping);
+  }
+
   page_table_destory (&cur->spage_table);
   file_mapping_table_destroy (&cur->file_mapping_table);
   
@@ -525,6 +531,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       newPage->zero_bytes = page_zero_bytes;
       newPage->ofs        = ofs;
       newPage->writable   = writable;
+      newPage->sector     = -1;
 
       if( !page_table_insert (&t->spage_table, newPage) )
       {
@@ -582,6 +589,7 @@ install_page (void *upage, void *kpage, bool writable)
   newPage->va = upage;
   newPage->kva = kpage;
   newPage->writable = writable;
+  newPage->sector = -1;
   success = page_table_insert (&t->spage_table , newPage);
   if (!success) {
     free (newPage);
